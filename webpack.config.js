@@ -7,20 +7,18 @@ module.exports = {
     filename: 'main.js',
     path: path.resolve(__dirname, 'dist'),
   },
+  module: {
+    rules: [
+      {
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader'],
+      },
+    ],
+  },
   plugins: [
     new HtmlWebpackPlugin({
       title: "Coronavirus Stats",
     }),
-  ],
-  module: {
-    rules: [
-     {
-        test: /\.(csv|tsv)$/,
-        use: [
-          'csv-loader',
-        ],
-      },
-    ]
-  }
+  ]
 };
 
