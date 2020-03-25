@@ -1,31 +1,74 @@
 import '../css/main.css';
 import Chart from 'chart.js';
+import noUiSlider from 'nouislider';
+import 'nouislider/distribute/nouislider.css';
+import wNumb from 'wnumb';
 
 var DEFAULT_NUM_GRAPH = 10;
 var MAX_NUM_GRAPH = 50;
+var initialized = false;
 
 // ***********************************
 //
-// Slider setup
+// Configuration items setup
 //
 // ***********************************
 
-// const datalist = document.createElement('datalist');
-// datalist.id = "tickmarks";
+// Box
+const box = document.createElement('div');
+box.style.padding = "30px 20px 30px 20px"; 
+document.body.appendChild(box);
 
-const inputSlider = document.createElement('input');
-inputSlider.id = "inputSlider";
-inputSlider.type = "range";
-inputSlider.classList.add("slider");
-inputSlider.min = 1;
-inputSlider.max = MAX_NUM_GRAPH;
-// inputSlider.list = "tickmarks";
-document.body.appendChild(inputSlider);
+// Log Checkbox
+// var logInputCheckbox = document.createElement('input'); 
+// logInputCheckbox.type = "checkbox"; 
+// logInputCheckbox.name = "logInput"; 
+// logInputCheckbox.value = false; 
+// logInputCheckbox.id = "logInput"; 
 
-inputSlider.oninput = function() {
-    DEFAULT_NUM_GRAPH = this.value;
-    processData();
-}
+// var logInputLabel = document.createElement('label'); 
+// logInputLabel.htmlFor = "id"; 
+// logInputLabel.appendChild(document.createTextNode('Log Y Axis')); 
+
+// box.appendChild(logInputCheckbox); 
+// box.appendChild(logInputLabel); 
+
+// document.getElementById('logInputCheckbox').onclick = function() {
+//     if ( this.checked ) {
+//         // if checked ...
+//         alert( this.value );
+//     } else {
+//         // if not checked ...
+//     }
+// }
+
+// Slider
+const inputSlider = document.createElement('div');
+box.appendChild(inputSlider)
+inputSlider.id = "slider";
+
+noUiSlider.create(inputSlider, {
+    start: DEFAULT_NUM_GRAPH,
+    range: {
+        'min': 0,
+        'max': MAX_NUM_GRAPH
+    },
+    pips: {
+        mode: 'count',
+        values: 11
+    },
+    tooltips: true,
+    format: wNumb({
+        decimals: 0
+    })
+});
+
+inputSlider.noUiSlider.on('update', function() {
+    if (initialized == true) {
+        DEFAULT_NUM_GRAPH = this.get();
+        processData();
+    }
+});
 
 // ***********************************
 //
@@ -56,7 +99,7 @@ const scales = {
             }
         },
         display: true,
-        type: 'logarithmic',
+        type: 'logarithmic'
     }]
 };
 
@@ -73,9 +116,9 @@ var casesChart = new Chart(ctxCasesChart, {
         title: {
             display: true,
             text: 'Coronavirus - Cases'
-        }
-    },
-    scales: scales
+        },
+        scales: scales
+    }    
 });
 
 // deathsChart
@@ -91,9 +134,9 @@ var deathsChart = new Chart(ctxDeathsChart, {
         title: {
             display: true,
             text: 'Coronavirus - Deaths'
-        }
-    },
-    scales: scales
+        },
+        scales: scales
+    }
 });
 
 // ***********************************
@@ -146,7 +189,7 @@ function processData() {
     dateLabels = Object.keys(Data[0].timeline.cases);
     
     //inputSlider.max = Data.length;
-    inputSlider.value = DEFAULT_NUM_GRAPH;
+    //inputSlider.value = DEFAULT_NUM_GRAPH;
 
     var casesDatasets = [];
     var deathsDatasets = [];
@@ -210,6 +253,8 @@ function processData() {
         datasets: deathsDatasetsResult
     };
     deathsChart.update();
+
+    initialized = true;
 }
 
 // ***********************************
