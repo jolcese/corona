@@ -1,0 +1,25 @@
+{
+  "name": "corona",
+  "version": "1.0.0",
+  "description": "",
+  "private": "true",
+  "dependencies": {
+    "chart.js": "^2.9.3",
+    "lodash": "^4.17.15",
+    "novelcovid": "^1.0.7-b3"
+  },
+  "devDependencies": {
+    "html-webpack-plugin": "^4.0.1",
+    "webpack": "^4.42.1",
+    "webpack-cli": "^3.3.11"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "webpack --mode development",
+    "build": "webpack --mode production",
+    "vscode:prepublish": "webpack --mode production"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
