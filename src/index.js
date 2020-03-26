@@ -169,6 +169,10 @@ function getData(callback) {
             callback();
         } else {
             console.log('Not ready yet - Status: ' + xmlHttp.status + ' - ReadyState: ' + xmlHttp.readyState);
+            if (xmlHttp.readyState == 4) {
+                console.log('Request failed. Using cached data')
+                callback();
+            }
         }
     }
     xmlHttp.open("GET", "https://corona.lmao.ninja/v2/historical", true); // true for asynchronous 
@@ -201,7 +205,7 @@ function processData() {
         if (Data[i].province !== null ) {
             label = Data[i].country + ' - ' + Data[i].province;
         }
-        
+        //console.log(label);
         var casesData = Object.values(Data[i].timeline.cases);    
         casesDatasets.push({
             label: toTitleCase(label),
