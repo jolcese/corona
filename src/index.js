@@ -3,9 +3,13 @@ import Chart from 'chart.js';
 import noUiSlider from 'nouislider';
 import 'nouislider/distribute/nouislider.css';
 import wNumb from 'wnumb';
+import population from '../data/countries-population.csv'
 
 var DEFAULT_NUM_GRAPH = 10;
-var MAX_NUM_GRAPH = 50;
+var MAX_NUM_GRAPH = 100;
+var CASE_MILLION_MIN_POPULATION = 0;
+// var CASE_MILLION_MIN_POPULATION = 500000;
+
 var initialized = false;
 
 // ***********************************
@@ -118,7 +122,25 @@ var casesChart = new Chart(ctxCasesChart, {
             text: 'Coronavirus - Cases'
         },
         scales: scales
-    }    
+    }
+});
+
+// casesMillionChart
+const canvasCasesMillionChart = document.createElement('canvas');
+canvasCasesMillionChart.id="casesMillionChart";
+document.body.appendChild(canvasCasesMillionChart);
+var ctxCasesMillionChart = document.getElementById('casesMillionChart');
+var casesMillionChart = new Chart(ctxCasesMillionChart, {
+    type: 'line',
+    options: {
+        legend:legend,
+        responsive: true,
+        title: {
+            display: true,
+            text: 'Coronavirus - Cases per million'
+        },
+        scales: scales
+    }
 });
 
 // deathsChart
@@ -134,6 +156,24 @@ var deathsChart = new Chart(ctxDeathsChart, {
         title: {
             display: true,
             text: 'Coronavirus - Deaths'
+        },
+        scales: scales
+    }
+});
+
+// deathsMillionChart
+const canvasDeathsMillionChart = document.createElement('canvas');
+canvasDeathsMillionChart.id="deathsMillionChart";
+document.body.appendChild(canvasDeathsMillionChart);
+var ctxDeathsMillionChart = document.getElementById('deathsMillionChart');
+var deathsMillionChart = new Chart(ctxDeathsMillionChart, {
+    type: 'line',
+    options: {
+        legend:legend,
+        responsive: true,
+        title: {
+            display: true,
+            text: 'Coronavirus - Deaths per million'
         },
         scales: scales
     }
@@ -187,85 +227,150 @@ function getData(callback) {
 
 function processData() {
     
-    const Data = JSON.parse(window.localStorage.getItem('Data'));
+    const storedData = JSON.parse(window.localStorage.getItem('Data'));
     
     var dateLabels = [];
-    dateLabels = Object.keys(Data[0].timeline.cases);
+    dateLabels = Object.keys(storedData[0].timeline.cases);
     
+    var casesDatasets = [];
+    var casesMillionDatasets = [];
+    var deathsDatasets = [];
+    var deathsMillionDatasets = [];
+    
+    var cleanedData = [];
     //inputSlider.max = Data.length;
     //inputSlider.value = DEFAULT_NUM_GRAPH;
 
-    var casesDatasets = [];
-    var deathsDatasets = [];
-    
-    // Generate datasets
-    for (var i = 0; i < Data.length ; i++) {
-        
-        var label = Data[i].country;
-        if (Data[i].province !== null ) {
-            label = Data[i].country + ' - ' + Data[i].province;
-        }
-        //console.log(label);
-        var casesData = Object.values(Data[i].timeline.cases);    
-        casesDatasets.push({
-            label: toTitleCase(label),
-            data: casesData,
-            fill: false,
-            lineTension: 0
-        });
-        var deathsData = Object.values(Data[i].timeline.deaths);    
-        deathsDatasets.push({
-            label: toTitleCase(label),
-            data: deathsData,
-            fill: false,
-            lineTension: 0
-        });
-    }
-    
-    // Sort and prune casesDataset
-    casesDatasets.sort(compareMaxArray);
-    casesDatasets = casesDatasets.reverse();
-    var casesDatasetsResult = casesDatasets.slice(0,DEFAULT_NUM_GRAPH);
-    
-    for (var i = 0; i < casesDatasetsResult.length ; i++) {
-        casesDatasetsResult[i].borderColor = calcColor(0,DEFAULT_NUM_GRAPH, DEFAULT_NUM_GRAPH - i);
-        casesDatasetsResult[i].backgroundColor = calcColor(0,DEFAULT_NUM_GRAPH, DEFAULT_NUM_GRAPH - i);
-        casesDatasetsResult[i].pointStyle = pointStyle(i);
-        casesDatasetsResult[i].pointRadius = 4;
-    }
-    
-    casesChart.data = {
-        labels: dateLabels,
-        datasets: casesDatasetsResult
-    };
-    casesChart.update();
+    cleanedData = mergeAndCleanUpProvinces(storedData);
 
-    // Sort and prune deathsDataset
-    deathsDatasets.sort(compareMaxArray);
-    deathsDatasets = deathsDatasets.reverse();
-    var deathsDatasetsResult = deathsDatasets.slice(0,DEFAULT_NUM_GRAPH);
-    
-    for (var i = 0; i < deathsDatasetsResult.length ; i++) {
-        deathsDatasetsResult[i].borderColor = calcColor(0,DEFAULT_NUM_GRAPH, DEFAULT_NUM_GRAPH - i);
-        deathsDatasetsResult[i].backgroundColor = calcColor(0,DEFAULT_NUM_GRAPH, DEFAULT_NUM_GRAPH - i);
-        deathsDatasetsResult[i].pointStyle = pointStyle(i);
-        deathsDatasetsResult[i].pointRadius = 4;
+    // Generate datasets
+    for (var country of cleanedData) {
+        
+        var label = country.country;
+        if (country.province !== null ) {
+            label = country.country + ' - ' + country.province;
+        }
+
+        pushData(casesDatasets, label, Object.values(country.timeline.cases));
+        pushData(casesMillionDatasets, label, calculatePerMillionDataset(country, 'cases'));
+        pushData(deathsDatasets, label, Object.values(country.timeline.deaths));
+        pushData(deathsMillionDatasets, label, calculatePerMillionDataset(country, 'deaths'));
     }
     
-    deathsChart.data = {
-        labels: dateLabels,
-        datasets: deathsDatasetsResult
-    };
-    deathsChart.update();
+    updateChart(casesChart, dateLabels, casesDatasets);
+    updateChart(casesMillionChart, dateLabels, casesMillionDatasets);
+    updateChart(deathsChart, dateLabels, deathsDatasets);
+    updateChart(deathsMillionChart, dateLabels, deathsMillionDatasets);
 
     initialized = true;
 }
+
+// Update data to per million
+function calculatePerMillionDataset (country, type) {
+    var populationObject = {};
+    population.forEach(country => populationObject[country[0]]=country[1]);
+
+    var perMillionData = Object.values(country.timeline[type]);
+
+    if ((country.province !== null && country.province != country.country ) || populationObject[country.country] == undefined || populationObject[country.country] < CASE_MILLION_MIN_POPULATION)
+    {
+        perMillionData = perMillionData.map(x => x * 0); 
+        console.log(country.country + ' - ' + country.province + ' - ' + populationObject[country.country])
+    } 
+    else {
+        perMillionData = perMillionData.map(x => x * 1000000 / populationObject[country.country]); 
+    }
+    return (perMillionData)
+}
+
+// Add data into dataset
+function pushData(dataset, label, data) {
+    dataset.push({
+        label: toTitleCase(label),
+        data: data,
+        fill: false,
+        lineTension: 0
+    });
+}
+
+// Merge countries with provinces and separate colonies
+function mergeAndCleanUpProvinces(originalData) {
+
+    var cleanedData = [];
+    for (var country of originalData) {
+        if (country.country == 'france' || country.country == 'uk' || country.country == 'denmark' || country.country == 'netherlands') {
+            // Countries with colonies
+            if (!country.province)
+            {
+                var obj = country;
+                cleanedData.push(obj);
+            }
+            else 
+            {
+                var obj = country;
+                obj.country = obj.province;
+                obj.province = null;
+                cleanedData.push(obj);
+            }
+        }
+        else if (country.country == 'china' || country.country == 'australia' || country.country == 'canada') {
+            // Countries with provinces/states
+            var obj = country;
+            obj.province = null;
+
+            var foundAndAppended = false;
+            for (var idx = 0; idx < cleanedData.length; idx++) {
+                if (cleanedData[idx].country === obj.country) {
+
+
+                    //MERGE
+
+
+
+                    foundAndAppended = true;
+                }
+            }
+            if (!foundAndAppended) {
+                cleanedData.push(obj)
+            }
+        }
+        else {
+            // All other countries
+            cleanedData.push(country);
+        }
+    }
+    return cleanedData;
+}
+
+// Sort, prune to max # graphs and update graph
+function updateChart(chart, dateLabels, dataset) {
+    dataset.sort(compareMaxArray);
+    dataset = dataset.reverse();
+    var datasetResult = dataset.slice(0,DEFAULT_NUM_GRAPH);
+    datasetResult = setLineStyle(datasetResult);
+    chart.data = {
+        labels: dateLabels,
+        datasets: datasetResult
+    };
+    chart.update();
+}
+
 
 // ***********************************
 //
 // Helper functions
 //
 // ***********************************
+
+function setLineStyle(dataset) {
+    for (var i = 0; i < dataset.length ; i++) {
+        dataset[i].borderColor = calcColor(0,DEFAULT_NUM_GRAPH, DEFAULT_NUM_GRAPH - i);
+        dataset[i].backgroundColor = calcColor(0,DEFAULT_NUM_GRAPH, DEFAULT_NUM_GRAPH - i);
+        dataset[i].pointStyle = pointStyle(i);
+        dataset[i].pointRadius = 4;
+    }
+    return (dataset)
+}
 
 function compareMaxArray(a, b) {
     let comparison = 0;
