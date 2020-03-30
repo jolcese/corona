@@ -247,9 +247,9 @@ function processData() {
     for (var country of cleanedData) {
         
         var label = country.country;
-        if (country.province !== null ) {
-            label = country.country + ' - ' + country.province;
-        }
+        // if (country.province !== null ) {
+        //     label = country.country + ' - ' + country.province;
+        // }
 
         pushData(casesDatasets, label, Object.values(country.timeline.cases));
         pushData(casesMillionDatasets, label, calculatePerMillionDataset(country, 'cases'));
@@ -272,13 +272,15 @@ function calculatePerMillionDataset (country, type) {
 
     var perMillionData = Object.values(country.timeline[type]);
 
-    if ((country.province !== null && country.province != country.country ) || populationObject[country.country] == undefined || populationObject[country.country] < CASE_MILLION_MIN_POPULATION)
+    var countryname = country.country.toLowerCase();
+    
+    if ((country.province !== null && country.province != country.country ) || populationObject[countryname] == undefined || populationObject[countryname] < CASE_MILLION_MIN_POPULATION)
     {
         perMillionData = perMillionData.map(x => x * 0); 
-        console.log(country.country + ' - ' + country.province + ' - ' + populationObject[country.country])
+        console.log(country.country + ' - ' + country.province + ' - ' + populationObject[countryname])
     } 
     else {
-        perMillionData = perMillionData.map(x => x * 1000000 / populationObject[country.country]); 
+        perMillionData = perMillionData.map(x => x * 1000000 / populationObject[countryname]); 
     }
     return (perMillionData)
 }
@@ -298,7 +300,10 @@ function mergeAndCleanUpProvinces(originalData) {
 
     var cleanedData = [];
     for (var country of originalData) {
-        if (country.country == 'france' || country.country == 'uk' || country.country == 'denmark' || country.country == 'netherlands') {
+
+        var countryname = country.country.toLowerCase();
+
+        if (countryname == 'france' || countryname == 'uk' || countryname == 'denmark' || countryname == 'netherlands') {
             // Countries with colonies
             if (!country.province)
             {
@@ -308,12 +313,13 @@ function mergeAndCleanUpProvinces(originalData) {
             else 
             {
                 var obj = country;
+                // obj.country = obj.province + ' (' + country.country + ')';
                 obj.country = obj.province;
                 obj.province = null;
                 cleanedData.push(obj);
             }
         }
-        else if (country.country == 'china' || country.country == 'australia' || country.country == 'canada') {
+        else if (countryname == 'china' || countryname == 'australia' || countryname == 'canada') {
             // Countries with provinces/states
             var obj = country;
             obj.province = null;
