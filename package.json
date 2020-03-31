@@ -1,6 +1,6 @@
 {
   "name": "corona",
-  "version": "1.0.0",
+  "version": "0.0.3",
   "description": "",
   "private": "true",
   "dependencies": {
@@ -25,6 +25,6 @@
     "vscode:prepublish": "webpack --mode production"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "author": "Jose Olcese",
+  "license": "MIT"
 }

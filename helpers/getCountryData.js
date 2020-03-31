@@ -4,7 +4,7 @@ const fs = require('fs');
 const https = require('https');
 const request = require('request');
 
-if (fs.existsSync('../data/countries-population.csv')) fs.unlinkSync('../data/countries-population.csv');
+if (fs.existsSync('./data/countries-population.csv')) fs.unlinkSync('./data/countries-population.csv');
 
 async function process() { 
   
@@ -41,11 +41,12 @@ async function process() {
       if (Array.isArray(JSON.parse(data)) ) {
         //fs.writeFileSync(JSON.parse(data)[0].name + '.json', data);
         var pop = JSON.parse(data)[0].population;
-        if (requestCountry == 'india') pop = 1339000000;
+        var region = JSON.parse(data)[0].region;
+        if (requestCountry.toLowerCase() == 'india') pop = 1339000000;
         
         // if (country.province) console.log('Country: ' + country.country + ' - province: ' + country.province + ' - Pop: ' + pop);
         
-        fs.appendFileSync('../data/countries-population.csv', requestCountry + ',' + pop + '\n');
+        fs.appendFileSync('./data/countries-population.csv', requestCountry.toLowerCase() + ',' + pop + ',' + region + '\n');
         
       } else {
         console.log('**** NO **** -> ' + requestCountry);

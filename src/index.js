@@ -23,11 +23,11 @@ const box = document.createElement('div');
 box.style.padding = "30px 20px 30px 20px"; 
 document.body.appendChild(box);
 
-// Log Checkbox
+// // Log Checkbox
 // var logInputCheckbox = document.createElement('input'); 
 // logInputCheckbox.type = "checkbox"; 
 // logInputCheckbox.name = "logInput"; 
-// logInputCheckbox.value = false; 
+// logInputCheckbox.value = true; 
 // logInputCheckbox.id = "logInput"; 
 
 // var logInputLabel = document.createElement('label'); 
@@ -46,10 +46,13 @@ document.body.appendChild(box);
 //     }
 // }
 
-// Slider
+// Slider number of countries
+const inputSliderContainer = document.createElement('div');
+inputSliderContainer.className = 'sliderspacing';
+box.appendChild(inputSliderContainer);
 const inputSlider = document.createElement('div');
-box.appendChild(inputSlider)
 inputSlider.id = "slider";
+inputSliderContainer.appendChild(inputSlider)
 
 noUiSlider.create(inputSlider, {
     start: DEFAULT_NUM_GRAPH,
@@ -73,6 +76,65 @@ inputSlider.noUiSlider.on('update', function() {
         processData();
     }
 });
+
+// Slider dates
+const datesSliderContainer = document.createElement('div');
+datesSliderContainer.className = 'sliderspacing';
+box.appendChild(datesSliderContainer)
+const datesSlider = document.createElement('div');
+datesSlider.id = "datesSlider";
+datesSliderContainer.appendChild(datesSlider)
+
+var datesSliderinitialized = false;
+
+noUiSlider.create(datesSlider, {
+    start: [timestamp('2019'),timestamp('2020')],
+    range: {
+        'min': timestamp('2019'),
+        'max': timestamp('2020')
+    },
+    step: 24 * 60 * 60 * 1000,
+
+});
+const eventstart = document.createElement('span');
+eventstart.id = "eventstart";
+datesSliderContainer.appendChild(eventstart)
+
+const eventend = document.createElement('span');
+eventend.id = "eventend";
+datesSliderContainer.appendChild(eventend)
+
+// var dateValues = [
+//     document.getElementById('eventstart'),
+//     document.getElementById('eventend')
+// ];
+
+var startDatesArray, endDatesArray = 0;
+var startDatesDataArray, endDatesDataArray = 0;
+var startDatesTimestampDataArray, endDatesTimestampDataArray = 0;
+
+datesSlider.noUiSlider.on('update', function (values, handle) {
+    if (datesSliderinitialized === true) {
+        // dateValues[handle].innerHTML = dateValues[handle].id + ' - ' + formatDate(new Date(+values[handle])) + '<br/>';
+
+        document.getElementById('eventstart').innerHTML = 'Start: ' + formatDate(new Date(+values[0]));
+        document.getElementById('eventend').innerHTML = '  -  End: ' + formatDate(new Date(+values[1]));
+        
+        console.log(values[0])
+        startDatesArray = Math.floor((values[0] - startDatesTimestampDataArray) / ((endDatesTimestampDataArray - startDatesTimestampDataArray) / endDatesDataArray));
+        endDatesArray = Math.floor((values[1] - startDatesTimestampDataArray) / ((endDatesTimestampDataArray - startDatesTimestampDataArray) / endDatesDataArray));
+
+        // endDatesArray = 
+        processData();
+    }
+});
+
+// datesSlider.noUiSlider.on('update', function() {
+//     if (initialized == true) {
+//         DEFAULT_NUM_GRAPH = this.get();
+//         processData();
+//     }
+// });
 
 // ***********************************
 //
@@ -229,9 +291,32 @@ function processData() {
     
     const storedData = JSON.parse(window.localStorage.getItem('Data'));
     
+    var dateLabelsComplete = [];
     var dateLabels = [];
-    dateLabels = Object.keys(storedData[0].timeline.cases);
-    
+    dateLabelsComplete = Object.keys(storedData[0].timeline.cases);
+
+    dateLabels = dateLabelsComplete.slice (startDatesArray, endDatesArray);
+
+    if (datesSliderinitialized === false) {
+        datesSlider.noUiSlider.updateOptions({
+            range: {
+                'min': timestamp(dateLabelsComplete[0]),
+                'max': timestamp(dateLabelsComplete[dateLabelsComplete.length-1])
+            },
+            start: [timestamp(dateLabelsComplete[0]),timestamp(dateLabelsComplete[dateLabelsComplete.length-1])]
+        });
+        datesSliderinitialized = true;
+
+        startDatesDataArray = startDatesArray = 0;
+        endDatesDataArray = endDatesArray = dateLabelsComplete.length-1;
+
+        startDatesTimestampDataArray = timestamp(dateLabelsComplete[0]);
+        endDatesTimestampDataArray = timestamp(dateLabelsComplete[dateLabelsComplete.length-1]);
+
+    }
+
+    dateLabels = dateLabelsComplete.slice(startDatesArray, endDatesArray);
+
     var casesDatasets = [];
     var casesMillionDatasets = [];
     var deathsDatasets = [];
@@ -277,7 +362,7 @@ function calculatePerMillionDataset (country, type) {
     if ((country.province !== null && country.province != country.country ) || populationObject[countryname] == undefined || populationObject[countryname] < CASE_MILLION_MIN_POPULATION)
     {
         perMillionData = perMillionData.map(x => x * 0); 
-        console.log(country.country + ' - ' + country.province + ' - ' + populationObject[countryname])
+        console.log('Ignored: ' + country.country + ' - ' + country.province + ' - ' + populationObject[countryname])
     } 
     else {
         perMillionData = perMillionData.map(x => x * 1000000 / populationObject[countryname]); 
@@ -302,53 +387,90 @@ function mergeAndCleanUpProvinces(originalData) {
     for (var country of originalData) {
 
         var countryname = country.country.toLowerCase();
-
+        var countryObj;
+        
         if (countryname == 'france' || countryname == 'uk' || countryname == 'denmark' || countryname == 'netherlands') {
             // Countries with colonies
             if (!country.province)
             {
-                var obj = country;
-                cleanedData.push(obj);
+                countryObj = country;
             }
             else 
             {
-                var obj = country;
+                countryObj = country;
                 // obj.country = obj.province + ' (' + country.country + ')';
-                obj.country = obj.province;
-                obj.province = null;
-                cleanedData.push(obj);
+                countryObj.country = countryObj.province;
+                countryObj.province = null;
             }
+            countryObj.timeline = sliceDates(countryObj.timeline);
+            cleanedData.push(countryObj);
+
         }
         else if (countryname == 'china' || countryname == 'australia' || countryname == 'canada') {
             // Countries with provinces/states
-            var obj = country;
-            obj.province = null;
+            countryObj = country;
+            countryObj.province = null;
 
             var foundAndAppended = false;
             for (var idx = 0; idx < cleanedData.length; idx++) {
-                if (cleanedData[idx].country === obj.country) {
+                if (cleanedData[idx].country === countryObj.country) {
 
-
+                    // cleanedData[idx].timeline.cases = cleanedData[idx].timeline.cases + sliceDates(countryObj.timeline.cases);
+                    cleanedData[idx].timeline = addDates(cleanedData[idx].timeline, sliceDates(countryObj.timeline));
                     //MERGE
-
-
 
                     foundAndAppended = true;
                 }
             }
             if (!foundAndAppended) {
-                cleanedData.push(obj)
+                country.timeline = sliceDates(country.timeline);
+                cleanedData.push(countryObj)
             }
         }
         else {
             // All other countries
+            country.timeline = sliceDates(country.timeline);
             cleanedData.push(country);
         }
     }
     return cleanedData;
 }
 
-// Sort, prune to max # graphs and update graph
+//                    cleanedData[idx].timeline = addDates(cleanedData[idx].timeline + sliceDates(countryObj.timeline));
+
+function addDates(timeline, newTimeline) {
+    // country.timeline.cases = country.timeline.cases.slice(startDatesArray, endDatesArray);
+    var returnTimeline = {};
+    
+    for (var type of ['cases','deaths','recovered']) {
+        var obj = {};
+        returnTimeline[type] = {};
+        for (var key of Object.keys(timeline[type])) 
+        {
+            returnTimeline[type][key] = timeline[type][key] + newTimeline[type][key];
+        }
+    }
+    return (returnTimeline);
+}
+
+function sliceDates(timeline) {
+    // country.timeline.cases = country.timeline.cases.slice(startDatesArray, endDatesArray);
+    var returnTimeline = {};
+    
+    for (var type of ['cases','deaths','recovered']) {
+        var obj = {};
+        var idx = 0;
+        for (var key of Object.keys(timeline[type])) 
+        {
+            if (startDatesArray <= idx && endDatesArray >= idx) obj[key] = timeline[type][key];
+            idx++;
+        }
+        returnTimeline[type] = obj;
+    }
+    return (returnTimeline);
+}
+
+// Sort, prune to only # of countries and update graph
 function updateChart(chart, dateLabels, dataset) {
     dataset.sort(compareMaxArray);
     dataset = dataset.reverse();
@@ -367,6 +489,49 @@ function updateChart(chart, dateLabels, dataset) {
 // Helper functions
 //
 // ***********************************
+
+// Create a new date from a string, return as a timestamp.
+function timestamp(str) {
+    return new Date(str).getTime();
+}
+
+// Create a list of day and month names.
+var weekdays = [
+    "Sunday", "Monday", "Tuesday",
+    "Wednesday", "Thursday", "Friday",
+    "Saturday"
+];
+
+var months = [
+    "January", "February", "March",
+    "April", "May", "June", "July",
+    "August", "September", "October",
+    "November", "December"
+];
+
+// Append a suffix to dates.
+// Example: 23 => 23rd, 1 => 1st.
+function nth(d) {
+    if (d > 3 && d < 21) return 'th';
+    switch (d % 10) {
+        case 1:
+            return "st";
+        case 2:
+            return "nd";
+        case 3:
+            return "rd";
+        default:
+            return "th";
+    }
+}
+
+// Create a string representation of the date.
+function formatDate(date) {
+    return weekdays[date.getDay()] + ", " +
+        date.getDate() + nth(date.getDate()) + " " +
+        months[date.getMonth()] + " " +
+        date.getFullYear();
+}
 
 function setLineStyle(dataset) {
     for (var i = 0; i < dataset.length ; i++) {

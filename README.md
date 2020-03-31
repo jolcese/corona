@@ -35,21 +35,23 @@ TBD
 
 We use [SemVer](http://semver.org/) for versioning. 
 
+* 0.0.3 - Cleanup README.md. Sliders Spacing. 
+  * ~~Fix adding provinces for China, Australia & Canada~~
+  * ~~Add slider for dates~~
 * 0.0.2 - Fixed incorrect data due to changes in source names. Added readme.md. Added License
-~~Fix Readme (version)~~
+  * ~~Fix Readme (version)~~
+  * ~~Add reference to source data~~
 * 0.0.1 - Initial version
 
 ## TO DO
-* Fix adding provinces for China, Australia & Canada
-* Add slider for dates
 * Add slider for minimum population for per million graphs
 * Per million graphs starting at >1
 * Toggle linear/log graph
 * Add graphs starting at n th case / n th death
 * Add continent to data and ability to select
-* Add reference to source data 
 * Less decimals
 * Highlight (black) line when overing
+* Deduplicate countries array
 
 ## Authors
 
