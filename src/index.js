@@ -7,8 +7,8 @@ import population from '../data/countries-population.csv'
 
 var DEFAULT_NUM_GRAPH = 10;
 var MAX_NUM_GRAPH = 100;
-var CASE_MILLION_MIN_POPULATION = 0;
-// var CASE_MILLION_MIN_POPULATION = 500000;
+var MIN_VALUE_PER_MILLION = 0.1;
+var CASE_MILLION_MIN_POPULATION = 100000;
 
 var initialized = false;
 
@@ -18,10 +18,70 @@ var initialized = false;
 //
 // ***********************************
 
-// Box
-const box = document.createElement('div');
-box.style.padding = "30px 20px 30px 20px"; 
-document.body.appendChild(box);
+// Controls Box
+const controlBox = document.createElement('div');
+controlBox.style.padding = "30px 20px 30px 20px"; 
+document.body.appendChild(controlBox);
+
+// Request Data for x days
+var inputPeriod = document.createElement('input'); 
+inputPeriod.type = "value"; 
+inputPeriod.name = "inputPeriod"; 
+inputPeriod.value = 365; 
+inputPeriod.id = "inputPeriod"; 
+
+var inputPeriodLabel = document.createElement('label'); 
+inputPeriodLabel.htmlFor = "id"; 
+inputPeriodLabel.appendChild(document.createTextNode('Requested data for (days): ')); 
+
+controlBox.appendChild(inputPeriodLabel); 
+controlBox.appendChild(inputPeriod); 
+controlBox.appendChild(document.createElement("br"));
+
+// Minimum population for per million graphs
+var inputMinPerMillion = document.createElement('input'); 
+inputMinPerMillion.type = "value"; 
+inputMinPerMillion.name = "inputMinPerMillion"; 
+inputMinPerMillion.value = CASE_MILLION_MIN_POPULATION; 
+inputMinPerMillion.id = "inputMinPerMillion"; 
+
+var inputMinPerMillionLabel = document.createElement('label'); 
+inputMinPerMillionLabel.htmlFor = "id"; 
+inputMinPerMillionLabel.appendChild(document.createTextNode('Min country population for per million graphs: ')); 
+
+controlBox.appendChild(inputMinPerMillionLabel); 
+controlBox.appendChild(inputMinPerMillion); 
+controlBox.appendChild(document.createElement("br"));
+
+document.getElementById('inputMinPerMillion').onchange = function() {    
+    if (initialized == true) {
+        CASE_MILLION_MIN_POPULATION = this.value;
+        processData();
+    }    
+}
+
+// Minimum value for per million graphs
+var inputMinPerMillionAxis = document.createElement('input'); 
+inputMinPerMillionAxis.type = "value"; 
+inputMinPerMillionAxis.name = "inputMinPerMillionAxis"; 
+inputMinPerMillionAxis.value = MIN_VALUE_PER_MILLION; 
+inputMinPerMillionAxis.id = "inputMinPerMillionAxis"; 
+
+var inputMinPerMillionAxisLabel = document.createElement('label'); 
+inputMinPerMillionAxisLabel.htmlFor = "id"; 
+inputMinPerMillionAxisLabel.appendChild(document.createTextNode('Min Y-axis value for per million graphs: ')); 
+
+controlBox.appendChild(inputMinPerMillionAxisLabel); 
+controlBox.appendChild(inputMinPerMillionAxis); 
+controlBox.appendChild(document.createElement("br"));
+
+document.getElementById('inputMinPerMillionAxis').onchange = function() {    
+    if (initialized == true) {
+        MIN_VALUE_PER_MILLION = this.value;
+        processData();
+    }    
+}
+
 
 // // Log Checkbox
 // var logInputCheckbox = document.createElement('input'); 
@@ -49,7 +109,7 @@ document.body.appendChild(box);
 // Slider number of countries
 const inputSliderContainer = document.createElement('div');
 inputSliderContainer.className = 'sliderspacing';
-box.appendChild(inputSliderContainer);
+controlBox.appendChild(inputSliderContainer);
 const inputSlider = document.createElement('div');
 inputSlider.id = "slider";
 inputSliderContainer.appendChild(inputSlider)
@@ -80,7 +140,7 @@ inputSlider.noUiSlider.on('update', function() {
 // Slider dates
 const datesSliderContainer = document.createElement('div');
 datesSliderContainer.className = 'sliderspacing';
-box.appendChild(datesSliderContainer)
+controlBox.appendChild(datesSliderContainer)
 const datesSlider = document.createElement('div');
 datesSlider.id = "datesSlider";
 datesSliderContainer.appendChild(datesSlider)
@@ -277,7 +337,7 @@ function getData(callback) {
             }
         }
     }
-    xmlHttp.open("GET", "https://corona.lmao.ninja/v2/historical", true); // true for asynchronous 
+    xmlHttp.open("GET", "https://corona.lmao.ninja/v2/historical?lastdays=365", true); // true for asynchronous 
     xmlHttp.send(null);
 }
 
@@ -305,14 +365,16 @@ function processData() {
             },
             start: [timestamp(dateLabelsComplete[0]),timestamp(dateLabelsComplete[dateLabelsComplete.length-1])]
         });
-        datesSliderinitialized = true;
-
+        document.getElementById('eventstart').innerHTML = 'Start: ' + formatDate(new Date(dateLabelsComplete[0]));
+        document.getElementById('eventend').innerHTML = '  -  End: ' + formatDate(new Date(dateLabelsComplete[dateLabelsComplete.length-1]));
+        
         startDatesDataArray = startDatesArray = 0;
-        endDatesDataArray = endDatesArray = dateLabelsComplete.length-1;
+        endDatesDataArray = endDatesArray = dateLabelsComplete.length;
 
         startDatesTimestampDataArray = timestamp(dateLabelsComplete[0]);
         endDatesTimestampDataArray = timestamp(dateLabelsComplete[dateLabelsComplete.length-1]);
 
+        datesSliderinitialized = true;
     }
 
     dateLabels = dateLabelsComplete.slice(startDatesArray, endDatesArray);
@@ -365,7 +427,7 @@ function calculatePerMillionDataset (country, type) {
         console.log('Ignored: ' + country.country + ' - ' + country.province + ' - ' + populationObject[countryname])
     } 
     else {
-        perMillionData = perMillionData.map(x => x * 1000000 / populationObject[countryname]); 
+        perMillionData = perMillionData.map(x => (x * 1000000 / populationObject[countryname]).toFixed(2) >= MIN_VALUE_PER_MILLION ? (x * 1000000 / populationObject[countryname]).toFixed(2) : 0 ); 
     }
     return (perMillionData)
 }
