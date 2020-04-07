@@ -5,10 +5,12 @@ import 'nouislider/distribute/nouislider.css';
 import wNumb from 'wnumb';
 import population from '../data/countries-population.csv'
 
-var DEFAULT_NUM_GRAPH = 10;
 var MAX_NUM_GRAPH = 100;
-var MIN_VALUE_PER_MILLION = 0.1;
-var CASE_MILLION_MIN_POPULATION = 100000;
+var REQUEST_DAYS = getLocalData('RequestDays', 365);
+var DEFAULT_NUM_GRAPH = getLocalData('NumGraphs', 10);
+var MIN_VALUE_PER_MILLION = getLocalData('MinPerMillion', 0.1);
+var CASE_MILLION_MIN_POPULATION = getLocalData('MinPopulation', 100000);
+var LOG_AXIS = getLocalData('LogAxis', true);
 
 var initialized = false;
 
@@ -27,7 +29,7 @@ document.body.appendChild(controlBox);
 var inputPeriod = document.createElement('input'); 
 inputPeriod.type = "value"; 
 inputPeriod.name = "inputPeriod"; 
-inputPeriod.value = 365; 
+inputPeriod.value = REQUEST_DAYS; 
 inputPeriod.id = "inputPeriod"; 
 
 var inputPeriodLabel = document.createElement('label'); 
@@ -37,6 +39,14 @@ inputPeriodLabel.appendChild(document.createTextNode('Requested data for (days):
 controlBox.appendChild(inputPeriodLabel); 
 controlBox.appendChild(inputPeriod); 
 controlBox.appendChild(document.createElement("br"));
+
+document.getElementById('inputPeriod').onchange = function() {    
+    if (initialized == true) {
+        REQUEST_DAYS = this.value;
+        window.localStorage.setItem('RequestDays', REQUEST_DAYS);
+        getData(processData);
+    }    
+}
 
 // Minimum population for per million graphs
 var inputMinPerMillion = document.createElement('input'); 
@@ -56,6 +66,7 @@ controlBox.appendChild(document.createElement("br"));
 document.getElementById('inputMinPerMillion').onchange = function() {    
     if (initialized == true) {
         CASE_MILLION_MIN_POPULATION = this.value;
+        window.localStorage.setItem('MinPopulation', CASE_MILLION_MIN_POPULATION);
         processData();
     }    
 }
@@ -78,33 +89,47 @@ controlBox.appendChild(document.createElement("br"));
 document.getElementById('inputMinPerMillionAxis').onchange = function() {    
     if (initialized == true) {
         MIN_VALUE_PER_MILLION = this.value;
+        window.localStorage.setItem('MinPerMillion', MIN_VALUE_PER_MILLION);
         processData();
     }    
 }
 
 
-// // Log Checkbox
-// var logInputCheckbox = document.createElement('input'); 
-// logInputCheckbox.type = "checkbox"; 
-// logInputCheckbox.name = "logInput"; 
-// logInputCheckbox.value = true; 
-// logInputCheckbox.id = "logInput"; 
+// Log Checkbox
+var logInputCheckbox = document.createElement('input'); 
+logInputCheckbox.type = "checkbox"; 
+logInputCheckbox.name = "logInputCheckbox"; 
+logInputCheckbox.checked = (LOG_AXIS == "true"); 
+logInputCheckbox.id = "logInputCheckbox"; 
 
-// var logInputLabel = document.createElement('label'); 
-// logInputLabel.htmlFor = "id"; 
-// logInputLabel.appendChild(document.createTextNode('Log Y Axis')); 
+var logInputLabel = document.createElement('label'); 
+logInputLabel.htmlFor = "id"; 
+logInputLabel.appendChild(document.createTextNode('Log Y Axis')); 
 
-// box.appendChild(logInputCheckbox); 
-// box.appendChild(logInputLabel); 
+controlBox.appendChild(logInputLabel); 
+controlBox.appendChild(logInputCheckbox); 
+controlBox.appendChild(document.createElement("br"));
 
-// document.getElementById('logInputCheckbox').onclick = function() {
-//     if ( this.checked ) {
-//         // if checked ...
-//         alert( this.value );
-//     } else {
-//         // if not checked ...
-//     }
-// }
+document.getElementById('logInputCheckbox').onchange = function() {
+    LOG_AXIS = this.checked;
+    window.localStorage.setItem('LogAxis', LOG_AXIS);
+
+    if ( this.checked ) {
+        casesChart.options.scales = scalesLog;
+        casesMillionChart.options.scales = scalesLog;
+        deathsChart.options.scales = scalesLog;
+        deathsMillionChart.options.scales = scalesLog;
+    } else {
+        casesChart.options.scales = scalesLin;
+        casesMillionChart.options.scales = scalesLin;
+        deathsChart.options.scales = scalesLin;
+        deathsMillionChart.options.scales = scalesLin;
+    }
+    casesChart.update();
+    casesMillionChart.update();
+    deathsChart.update();
+    deathsMillionChart.update();
+}
 
 // Slider number of countries
 const inputSliderContainer = document.createElement('div');
@@ -133,6 +158,7 @@ noUiSlider.create(inputSlider, {
 inputSlider.noUiSlider.on('update', function() {
     if (initialized == true) {
         DEFAULT_NUM_GRAPH = this.get();
+        window.localStorage.setItem('NumGraphs', DEFAULT_NUM_GRAPH);
         processData();
     }
 });
@@ -164,11 +190,6 @@ const eventend = document.createElement('span');
 eventend.id = "eventend";
 datesSliderContainer.appendChild(eventend)
 
-// var dateValues = [
-//     document.getElementById('eventstart'),
-//     document.getElementById('eventend')
-// ];
-
 var startDatesArray, endDatesArray = 0;
 var startDatesDataArray, endDatesDataArray = 0;
 var startDatesTimestampDataArray, endDatesTimestampDataArray = 0;
@@ -184,17 +205,9 @@ datesSlider.noUiSlider.on('update', function (values, handle) {
         startDatesArray = Math.floor((values[0] - startDatesTimestampDataArray) / ((endDatesTimestampDataArray - startDatesTimestampDataArray) / endDatesDataArray));
         endDatesArray = Math.floor((values[1] - startDatesTimestampDataArray) / ((endDatesTimestampDataArray - startDatesTimestampDataArray) / endDatesDataArray));
 
-        // endDatesArray = 
         processData();
     }
 });
-
-// datesSlider.noUiSlider.on('update', function() {
-//     if (initialized == true) {
-//         DEFAULT_NUM_GRAPH = this.get();
-//         processData();
-//     }
-// });
 
 // ***********************************
 //
@@ -209,7 +222,7 @@ const legend = {
     position: 'right'
 };
 
-const scales = {
+const scalesLog = {
     xAxes: [{
         display: true,
     }],
@@ -228,6 +241,23 @@ const scales = {
         type: 'logarithmic'
     }]
 };
+
+const scalesLin = {
+    xAxes: [{
+        display: true,
+    }],
+    yAxes: [{
+        display: true,
+        type: 'linear'
+    }]
+};
+
+var scales;
+if (LOG_AXIS == "true") {
+    scales = scalesLog;
+} else {
+    scales = scalesLin;
+}
 
 // casesChart
 const canvasCasesChart = document.createElement('canvas');
@@ -337,7 +367,7 @@ function getData(callback) {
             }
         }
     }
-    xmlHttp.open("GET", "https://corona.lmao.ninja/v2/historical?lastdays=365", true); // true for asynchronous 
+    xmlHttp.open("GET", "https://corona.lmao.ninja/v2/historical?lastdays=" + REQUEST_DAYS, true); // true for asynchronous 
     xmlHttp.send(null);
 }
 
@@ -365,8 +395,8 @@ function processData() {
             },
             start: [timestamp(dateLabelsComplete[0]),timestamp(dateLabelsComplete[dateLabelsComplete.length-1])]
         });
-        document.getElementById('eventstart').innerHTML = 'Start: ' + formatDate(new Date(dateLabelsComplete[0]));
-        document.getElementById('eventend').innerHTML = '  -  End: ' + formatDate(new Date(dateLabelsComplete[dateLabelsComplete.length-1]));
+        // document.getElementById('eventstart').innerHTML = 'Start: ' + formatDate(new Date(dateLabelsComplete[0]));
+        // document.getElementById('eventend').innerHTML = '  -  End: ' + formatDate(new Date(dateLabelsComplete[dateLabelsComplete.length-1]));
         
         startDatesDataArray = startDatesArray = 0;
         endDatesDataArray = endDatesArray = dateLabelsComplete.length;
@@ -421,7 +451,7 @@ function calculatePerMillionDataset (country, type) {
 
     var countryname = country.country.toLowerCase();
     
-    if ((country.province !== null && country.province != country.country ) || populationObject[countryname] == undefined || populationObject[countryname] < CASE_MILLION_MIN_POPULATION)
+    if ((country.province !== null && country.province != country.country ) || populationObject[countryname] == undefined || parseInt(populationObject[countryname]) < parseInt(CASE_MILLION_MIN_POPULATION))
     {
         perMillionData = perMillionData.map(x => x * 0); 
         console.log('Ignored: ' + country.country + ' - ' + country.province + ' - ' + populationObject[countryname])
@@ -551,6 +581,17 @@ function updateChart(chart, dateLabels, dataset) {
 // Helper functions
 //
 // ***********************************
+
+function getLocalData(storageVariable, defaultValue) {
+    
+    var local = window.localStorage.getItem(storageVariable);
+    
+    if (local == null ) {
+        return defaultValue;
+    } else {
+        return local;
+    }
+};
 
 // Create a new date from a string, return as a timestamp.
 function timestamp(str) {

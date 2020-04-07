@@ -33,14 +33,18 @@ TBD
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. 
+We use [SemVer](http://semver.org/) for versioning.
 
+* 0.0.5
+  * ~~Address new API option ?lastdays=365 / Reload Data~~
+  * ~~Toggle linear/log graph~~
+  8 ~~Save values on local storage~~
 * 0.0.4 - Adding more controls
   * ~~Add slider for minimum population for per million graphs~~
   * ~~Per million graphs starting at >1~~
   * ~~Less decimals~~
-  * ~~Initialize slider text on load~~ 
-* 0.0.3 - Cleanup README.md. Sliders Spacing. 
+  * ~~Initialize slider text on load~~
+* 0.0.3 - Cleanup README.md. Sliders Spacing.
   * ~~Fix adding provinces for China, Australia & Canada~~
   * ~~Add slider for dates~~
 * 0.0.2 - Fixed incorrect data due to changes in source names. Added readme.md. Added License
@@ -49,8 +53,7 @@ We use [SemVer](http://semver.org/) for versioning.
 * 0.0.1 - Initial version
 
 ## TO DO
-* Address new API option ?lastdays=365 / Reload Data
-* Toggle linear/log graph
+* Need to fix Initialize slider text on load
 * Add graphs starting at n th case / n th death
 * Add continent to data and ability to select
 * Highlight (black) line when overing
