@@ -3,14 +3,17 @@ import Chart from 'chart.js';
 import noUiSlider from 'nouislider';
 import 'nouislider/distribute/nouislider.css';
 import wNumb from 'wnumb';
-import population from '../data/countries-population.csv'
+import {timestamp, formatDate} from './datesHelper.js';
+import {cleanupCountriesData, calculatePerMillionData} from './dataHandler.js';
+import {addDataToDataset, updateChart, legend, scalesLin, scalesLog} from './chartHelper.js';
+import {getSourceData} from './sourceData.js';
 
-var MAX_NUM_GRAPH = 100;
+var MAX_NUM_CHARTS = 100;
 var REQUEST_DAYS = getLocalData('RequestDays', 365);
-var DEFAULT_NUM_GRAPH = getLocalData('NumGraphs', 10);
+var NUM_CHARTS = getLocalData('NumGraphs', 10);
 var MIN_VALUE_PER_MILLION = getLocalData('MinPerMillion', 0.1);
 var CASE_MILLION_MIN_POPULATION = getLocalData('MinPopulation', 100000);
-var LOG_AXIS = getLocalData('LogAxis', true);
+var LOG_AXIS = getLocalData('LogAxis', "true");
 
 var initialized = false;
 
@@ -44,7 +47,8 @@ document.getElementById('inputPeriod').onchange = function() {
     if (initialized == true) {
         REQUEST_DAYS = this.value;
         window.localStorage.setItem('RequestDays', REQUEST_DAYS);
-        getData(processData);
+        datesSliderinitialized = false;
+        getSourceData(REQUEST_DAYS, processData);
     }    
 }
 
@@ -94,7 +98,6 @@ document.getElementById('inputMinPerMillionAxis').onchange = function() {
     }    
 }
 
-
 // Log Checkbox
 var logInputCheckbox = document.createElement('input'); 
 logInputCheckbox.type = "checkbox"; 
@@ -140,10 +143,10 @@ inputSlider.id = "slider";
 inputSliderContainer.appendChild(inputSlider)
 
 noUiSlider.create(inputSlider, {
-    start: DEFAULT_NUM_GRAPH,
+    start: NUM_CHARTS,
     range: {
         'min': 0,
-        'max': MAX_NUM_GRAPH
+        'max': MAX_NUM_CHARTS
     },
     pips: {
         mode: 'count',
@@ -157,8 +160,8 @@ noUiSlider.create(inputSlider, {
 
 inputSlider.noUiSlider.on('update', function() {
     if (initialized == true) {
-        DEFAULT_NUM_GRAPH = this.get();
-        window.localStorage.setItem('NumGraphs', DEFAULT_NUM_GRAPH);
+        NUM_CHARTS = this.get();
+        window.localStorage.setItem('NumGraphs', NUM_CHARTS);
         processData();
     }
 });
@@ -190,21 +193,22 @@ const eventend = document.createElement('span');
 eventend.id = "eventend";
 datesSliderContainer.appendChild(eventend)
 
-var startDatesArray, endDatesArray = 0;
-var startDatesDataArray, endDatesDataArray = 0;
-var startDatesTimestampDataArray, endDatesTimestampDataArray = 0;
+var startGraphIndex, endGraphIndex = 0;
+var startRawDataIndex, endRawDataIndex = 0;
+var startRawDataEpoch, endRawDataEpoch = 0;
 
 datesSlider.noUiSlider.on('update', function (values, handle) {
     if (datesSliderinitialized === true) {
-        // dateValues[handle].innerHTML = dateValues[handle].id + ' - ' + formatDate(new Date(+values[handle])) + '<br/>';
 
         document.getElementById('eventstart').innerHTML = 'Start: ' + formatDate(new Date(+values[0]));
         document.getElementById('eventend').innerHTML = '  -  End: ' + formatDate(new Date(+values[1]));
         
-        console.log(values[0])
-        startDatesArray = Math.floor((values[0] - startDatesTimestampDataArray) / ((endDatesTimestampDataArray - startDatesTimestampDataArray) / endDatesDataArray));
-        endDatesArray = Math.floor((values[1] - startDatesTimestampDataArray) / ((endDatesTimestampDataArray - startDatesTimestampDataArray) / endDatesDataArray));
+        console.log(new Date(+values[0]));
 
+        startGraphIndex = Math.floor((values[0] - startRawDataEpoch) / ((endRawDataEpoch - startRawDataEpoch) / endRawDataIndex));
+        endGraphIndex = Math.floor((values[1] - startRawDataEpoch) / ((endRawDataEpoch - startRawDataEpoch) / endRawDataIndex));
+
+        console.log()
         processData();
     }
 });
@@ -214,43 +218,6 @@ datesSlider.noUiSlider.on('update', function (values, handle) {
 // Charts setup
 //
 // ***********************************
-
-const legend = {
-    labels: {
-        usePointStyle: true
-    },
-    position: 'right'
-};
-
-const scalesLog = {
-    xAxes: [{
-        display: true,
-    }],
-    yAxes: [{
-        ticks: {
-            beginAtZero: true,
-            userCallback: function(tick) {
-                var remain = tick / (Math.pow(10, Math.floor(Chart.helpers.log10(tick))));
-                if (remain === 1 || remain === 2 || remain === 5) {
-                    return tick.toString();
-                }
-                return '';
-            }
-        },
-        display: true,
-        type: 'logarithmic'
-    }]
-};
-
-const scalesLin = {
-    xAxes: [{
-        display: true,
-    }],
-    yAxes: [{
-        display: true,
-        type: 'linear'
-    }]
-};
 
 var scales;
 if (LOG_AXIS == "true") {
@@ -343,32 +310,10 @@ var savedTime = window.localStorage.getItem('Time');
 var now = new Date();
 
 if (localData == null || (now.getTime() - savedTime > (1000 * 60 * 15))) { // 15 minutes 
-    getData(processData);
+    getSourceData(REQUEST_DAYS, processData);
 } else {
     console.log('Using cached data. Last refresh: ' + (now.getTime() - savedTime) / 1000 + ' seconds ago')
     processData();
-}
-
-function getData(callback) {
-    var xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function() { 
-        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-            window.localStorage.setItem('Data', xmlHttp.responseText);
-            
-            var saveTime = new Date();
-            window.localStorage.setItem('Time', saveTime.getTime());
-            
-            callback();
-        } else {
-            console.log('Not ready yet - Status: ' + xmlHttp.status + ' - ReadyState: ' + xmlHttp.readyState);
-            if (xmlHttp.readyState == 4) {
-                console.log('Request failed. Using cached data')
-                callback();
-            }
-        }
-    }
-    xmlHttp.open("GET", "https://corona.lmao.ninja/v2/historical?lastdays=" + REQUEST_DAYS, true); // true for asynchronous 
-    xmlHttp.send(null);
 }
 
 // ***********************************
@@ -381,200 +326,61 @@ function processData() {
     
     const storedData = JSON.parse(window.localStorage.getItem('Data'));
     
-    var dateLabelsComplete = [];
-    var dateLabels = [];
-    dateLabelsComplete = Object.keys(storedData[0].timeline.cases);
+    var rawDateLabels = [];
+    var slicedDateLabels = [];
 
-    dateLabels = dateLabelsComplete.slice (startDatesArray, endDatesArray);
+    rawDateLabels = Object.keys(storedData[0].timeline.cases);
 
     if (datesSliderinitialized === false) {
         datesSlider.noUiSlider.updateOptions({
             range: {
-                'min': timestamp(dateLabelsComplete[0]),
-                'max': timestamp(dateLabelsComplete[dateLabelsComplete.length-1])
+                'min': timestamp(rawDateLabels[0]),
+                'max': timestamp(rawDateLabels[rawDateLabels.length-1])
             },
-            start: [timestamp(dateLabelsComplete[0]),timestamp(dateLabelsComplete[dateLabelsComplete.length-1])]
+            start: [timestamp(rawDateLabels[0]),timestamp(rawDateLabels[rawDateLabels.length-1])]
         });
-        // document.getElementById('eventstart').innerHTML = 'Start: ' + formatDate(new Date(dateLabelsComplete[0]));
-        // document.getElementById('eventend').innerHTML = '  -  End: ' + formatDate(new Date(dateLabelsComplete[dateLabelsComplete.length-1]));
+        console.log('Slider: 0 - ' + String(rawDateLabels.length-1));
         
-        startDatesDataArray = startDatesArray = 0;
-        endDatesDataArray = endDatesArray = dateLabelsComplete.length;
+        startRawDataIndex = startGraphIndex = 0;
+        endRawDataIndex = endGraphIndex = rawDateLabels.length;
 
-        startDatesTimestampDataArray = timestamp(dateLabelsComplete[0]);
-        endDatesTimestampDataArray = timestamp(dateLabelsComplete[dateLabelsComplete.length-1]);
+        startRawDataEpoch = timestamp(rawDateLabels[0]);
+        endRawDataEpoch = timestamp(rawDateLabels[rawDateLabels.length-1]);
+
+        console.log(new Date(startRawDataEpoch));
+        document.getElementById('eventstart').innerHTML = 'Start: ' + formatDate(new Date(startRawDataEpoch));
+        document.getElementById('eventend').innerHTML = '  -  End: ' + formatDate(new Date(endRawDataEpoch));
 
         datesSliderinitialized = true;
     }
 
-    dateLabels = dateLabelsComplete.slice(startDatesArray, endDatesArray);
+    slicedDateLabels = rawDateLabels.slice(startGraphIndex, endGraphIndex);
 
     var casesDatasets = [];
     var casesMillionDatasets = [];
     var deathsDatasets = [];
     var deathsMillionDatasets = [];
     
-    var cleanedData = [];
-    //inputSlider.max = Data.length;
-    //inputSlider.value = DEFAULT_NUM_GRAPH;
-
-    cleanedData = mergeAndCleanUpProvinces(storedData);
+    const slicedData = cleanupCountriesData(storedData, startGraphIndex, endGraphIndex);
 
     // Generate datasets
-    for (var country of cleanedData) {
+    for (var slicedCountryData of slicedData) {
         
-        var label = country.country;
-        // if (country.province !== null ) {
-        //     label = country.country + ' - ' + country.province;
-        // }
+        const label = slicedCountryData.country;
 
-        pushData(casesDatasets, label, Object.values(country.timeline.cases));
-        pushData(casesMillionDatasets, label, calculatePerMillionDataset(country, 'cases'));
-        pushData(deathsDatasets, label, Object.values(country.timeline.deaths));
-        pushData(deathsMillionDatasets, label, calculatePerMillionDataset(country, 'deaths'));
+        addDataToDataset(casesDatasets, label, Object.values(slicedCountryData.timeline.cases));
+        addDataToDataset(casesMillionDatasets, label, calculatePerMillionData(slicedCountryData, 'cases', CASE_MILLION_MIN_POPULATION, MIN_VALUE_PER_MILLION));
+        addDataToDataset(deathsDatasets, label, Object.values(slicedCountryData.timeline.deaths));
+        addDataToDataset(deathsMillionDatasets, label, calculatePerMillionData(slicedCountryData, 'deaths', CASE_MILLION_MIN_POPULATION, MIN_VALUE_PER_MILLION));
     }
     
-    updateChart(casesChart, dateLabels, casesDatasets);
-    updateChart(casesMillionChart, dateLabels, casesMillionDatasets);
-    updateChart(deathsChart, dateLabels, deathsDatasets);
-    updateChart(deathsMillionChart, dateLabels, deathsMillionDatasets);
+    updateChart(casesChart, slicedDateLabels, casesDatasets, NUM_CHARTS);
+    updateChart(casesMillionChart, slicedDateLabels, casesMillionDatasets, NUM_CHARTS);
+    updateChart(deathsChart, slicedDateLabels, deathsDatasets, NUM_CHARTS);
+    updateChart(deathsMillionChart, slicedDateLabels, deathsMillionDatasets, NUM_CHARTS);
 
     initialized = true;
 }
-
-// Update data to per million
-function calculatePerMillionDataset (country, type) {
-    var populationObject = {};
-    population.forEach(country => populationObject[country[0]]=country[1]);
-
-    var perMillionData = Object.values(country.timeline[type]);
-
-    var countryname = country.country.toLowerCase();
-    
-    if ((country.province !== null && country.province != country.country ) || populationObject[countryname] == undefined || parseInt(populationObject[countryname]) < parseInt(CASE_MILLION_MIN_POPULATION))
-    {
-        perMillionData = perMillionData.map(x => x * 0); 
-        console.log('Ignored: ' + country.country + ' - ' + country.province + ' - ' + populationObject[countryname])
-    } 
-    else {
-        perMillionData = perMillionData.map(x => (x * 1000000 / populationObject[countryname]).toFixed(2) >= MIN_VALUE_PER_MILLION ? (x * 1000000 / populationObject[countryname]).toFixed(2) : 0 ); 
-    }
-    return (perMillionData)
-}
-
-// Add data into dataset
-function pushData(dataset, label, data) {
-    dataset.push({
-        label: toTitleCase(label),
-        data: data,
-        fill: false,
-        lineTension: 0
-    });
-}
-
-// Merge countries with provinces and separate colonies
-function mergeAndCleanUpProvinces(originalData) {
-
-    var cleanedData = [];
-    for (var country of originalData) {
-
-        var countryname = country.country.toLowerCase();
-        var countryObj;
-        
-        if (countryname == 'france' || countryname == 'uk' || countryname == 'denmark' || countryname == 'netherlands') {
-            // Countries with colonies
-            if (!country.province)
-            {
-                countryObj = country;
-            }
-            else 
-            {
-                countryObj = country;
-                // obj.country = obj.province + ' (' + country.country + ')';
-                countryObj.country = countryObj.province;
-                countryObj.province = null;
-            }
-            countryObj.timeline = sliceDates(countryObj.timeline);
-            cleanedData.push(countryObj);
-
-        }
-        else if (countryname == 'china' || countryname == 'australia' || countryname == 'canada') {
-            // Countries with provinces/states
-            countryObj = country;
-            countryObj.province = null;
-
-            var foundAndAppended = false;
-            for (var idx = 0; idx < cleanedData.length; idx++) {
-                if (cleanedData[idx].country === countryObj.country) {
-
-                    // cleanedData[idx].timeline.cases = cleanedData[idx].timeline.cases + sliceDates(countryObj.timeline.cases);
-                    cleanedData[idx].timeline = addDates(cleanedData[idx].timeline, sliceDates(countryObj.timeline));
-                    //MERGE
-
-                    foundAndAppended = true;
-                }
-            }
-            if (!foundAndAppended) {
-                country.timeline = sliceDates(country.timeline);
-                cleanedData.push(countryObj)
-            }
-        }
-        else {
-            // All other countries
-            country.timeline = sliceDates(country.timeline);
-            cleanedData.push(country);
-        }
-    }
-    return cleanedData;
-}
-
-//                    cleanedData[idx].timeline = addDates(cleanedData[idx].timeline + sliceDates(countryObj.timeline));
-
-function addDates(timeline, newTimeline) {
-    // country.timeline.cases = country.timeline.cases.slice(startDatesArray, endDatesArray);
-    var returnTimeline = {};
-    
-    for (var type of ['cases','deaths','recovered']) {
-        var obj = {};
-        returnTimeline[type] = {};
-        for (var key of Object.keys(timeline[type])) 
-        {
-            returnTimeline[type][key] = timeline[type][key] + newTimeline[type][key];
-        }
-    }
-    return (returnTimeline);
-}
-
-function sliceDates(timeline) {
-    // country.timeline.cases = country.timeline.cases.slice(startDatesArray, endDatesArray);
-    var returnTimeline = {};
-    
-    for (var type of ['cases','deaths','recovered']) {
-        var obj = {};
-        var idx = 0;
-        for (var key of Object.keys(timeline[type])) 
-        {
-            if (startDatesArray <= idx && endDatesArray >= idx) obj[key] = timeline[type][key];
-            idx++;
-        }
-        returnTimeline[type] = obj;
-    }
-    return (returnTimeline);
-}
-
-// Sort, prune to only # of countries and update graph
-function updateChart(chart, dateLabels, dataset) {
-    dataset.sort(compareMaxArray);
-    dataset = dataset.reverse();
-    var datasetResult = dataset.slice(0,DEFAULT_NUM_GRAPH);
-    datasetResult = setLineStyle(datasetResult);
-    chart.data = {
-        labels: dateLabels,
-        datasets: datasetResult
-    };
-    chart.update();
-}
-
 
 // ***********************************
 //
@@ -592,83 +398,3 @@ function getLocalData(storageVariable, defaultValue) {
         return local;
     }
 };
-
-// Create a new date from a string, return as a timestamp.
-function timestamp(str) {
-    return new Date(str).getTime();
-}
-
-// Create a list of day and month names.
-var weekdays = [
-    "Sunday", "Monday", "Tuesday",
-    "Wednesday", "Thursday", "Friday",
-    "Saturday"
-];
-
-var months = [
-    "January", "February", "March",
-    "April", "May", "June", "July",
-    "August", "September", "October",
-    "November", "December"
-];
-
-// Append a suffix to dates.
-// Example: 23 => 23rd, 1 => 1st.
-function nth(d) {
-    if (d > 3 && d < 21) return 'th';
-    switch (d % 10) {
-        case 1:
-            return "st";
-        case 2:
-            return "nd";
-        case 3:
-            return "rd";
-        default:
-            return "th";
-    }
-}
-
-// Create a string representation of the date.
-function formatDate(date) {
-    return weekdays[date.getDay()] + ", " +
-        date.getDate() + nth(date.getDate()) + " " +
-        months[date.getMonth()] + " " +
-        date.getFullYear();
-}
-
-function setLineStyle(dataset) {
-    for (var i = 0; i < dataset.length ; i++) {
-        dataset[i].borderColor = calcColor(0,DEFAULT_NUM_GRAPH, DEFAULT_NUM_GRAPH - i);
-        dataset[i].backgroundColor = calcColor(0,DEFAULT_NUM_GRAPH, DEFAULT_NUM_GRAPH - i);
-        dataset[i].pointStyle = pointStyle(i);
-        dataset[i].pointRadius = 4;
-    }
-    return (dataset)
-}
-
-function compareMaxArray(a, b) {
-    let comparison = 0;
-    if (parseInt(a.data[a.data.length-2]) > parseInt(b.data[b.data.length-2])) comparison = 1;
-    if (parseInt(a.data[a.data.length-2]) < parseInt(b.data[b.data.length-2])) comparison = -1;
-    return comparison;
-}
-
-function calcColor(min, max, val)
-{
-    var minHue = 240, maxHue=0;
-    var curPercent = (val - min) / (max-min);
-    var colString = "hsl(" + ((curPercent * (maxHue-minHue) ) + minHue) + ",100%,50%)";
-    return colString;
-}
-
-function toTitleCase(str) {
-    return str.replace(/\w\S*/g, function(txt){
-        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-    });
-}
-
-function pointStyle(index) {
-    //   var styles = [ 'circle', 'cross', 'crossRot', 'dash', 'line', 'rect', 'rectRounded', 'rectRot', 'star', 'triangle']
-    var styles = [ 'circle', 'cross', 'crossRot', 'rect', 'rectRounded', 'rectRot', 'star', 'triangle']
-    return styles[index % styles.length];
-}

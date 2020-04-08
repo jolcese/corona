@@ -35,6 +35,9 @@ TBD
 
 We use [SemVer](http://semver.org/) for versioning.
 
+* 0.0.6 Refactor into different modules
+  * ~~Deduplicate countries array~~
+  * ~~Fixed Initialize slider text on load~~
 * 0.0.5
   * ~~Address new API option ?lastdays=365 / Reload Data~~
   * ~~Toggle linear/log graph~~
@@ -53,11 +56,10 @@ We use [SemVer](http://semver.org/) for versioning.
 * 0.0.1 - Initial version
 
 ## TO DO
-* Need to fix Initialize slider text on load
 * Add graphs starting at n th case / n th death
 * Add continent to data and ability to select
 * Highlight (black) line when overing
-* Deduplicate countries array
+* Remove access to local storage on getSourceData
 
 ## Authors
 
