@@ -5,7 +5,7 @@ import 'nouislider/distribute/nouislider.css';
 import wNumb from 'wnumb';
 import {timestamp, formatDate} from './datesHelper.js';
 import {cleanupCountriesData, calculatePerMillionData} from './dataHandler.js';
-import {addDataToDataset, updateChart, legend, scalesLin, scalesLog} from './chartHelper.js';
+import {createChart, addDataToDataset, updateChart, updateChartScale} from './chartHelper.js';
 import {getSourceData} from './sourceData.js';
 
 var MAX_NUM_CHARTS = 100;
@@ -117,21 +117,10 @@ document.getElementById('logInputCheckbox').onchange = function() {
     LOG_AXIS = this.checked;
     window.localStorage.setItem('LogAxis', LOG_AXIS);
 
-    if ( this.checked ) {
-        casesChart.options.scales = scalesLog;
-        casesMillionChart.options.scales = scalesLog;
-        deathsChart.options.scales = scalesLog;
-        deathsMillionChart.options.scales = scalesLog;
-    } else {
-        casesChart.options.scales = scalesLin;
-        casesMillionChart.options.scales = scalesLin;
-        deathsChart.options.scales = scalesLin;
-        deathsMillionChart.options.scales = scalesLin;
-    }
-    casesChart.update();
-    casesMillionChart.update();
-    deathsChart.update();
-    deathsMillionChart.update();
+    updateChartScale(casesChart, this.checked);
+    updateChartScale(casesMillionChart, this.checked);
+    updateChartScale(deathsChart, this.checked);
+    updateChartScale(deathsMillionChart, this.checked);
 }
 
 // Slider number of countries
@@ -219,84 +208,29 @@ datesSlider.noUiSlider.on('update', function (values, handle) {
 //
 // ***********************************
 
-var scales;
-if (LOG_AXIS == "true") {
-    scales = scalesLog;
-} else {
-    scales = scalesLin;
-}
-
 // casesChart
 const canvasCasesChart = document.createElement('canvas');
 canvasCasesChart.id="casesChart";
 document.body.appendChild(canvasCasesChart);
-var ctxCasesChart = document.getElementById('casesChart');
-var casesChart = new Chart(ctxCasesChart, {
-    type: 'line',
-    options: {
-        legend:legend,
-        responsive: true,
-        title: {
-            display: true,
-            text: 'Coronavirus - Cases'
-        },
-        scales: scales
-    }
-});
+var casesChart = createChart(document.getElementById('casesChart'), 'Coronavirus - Cases', LOG_AXIS);
 
 // casesMillionChart
 const canvasCasesMillionChart = document.createElement('canvas');
 canvasCasesMillionChart.id="casesMillionChart";
 document.body.appendChild(canvasCasesMillionChart);
-var ctxCasesMillionChart = document.getElementById('casesMillionChart');
-var casesMillionChart = new Chart(ctxCasesMillionChart, {
-    type: 'line',
-    options: {
-        legend:legend,
-        responsive: true,
-        title: {
-            display: true,
-            text: 'Coronavirus - Cases per million'
-        },
-        scales: scales
-    }
-});
+var casesMillionChart = createChart(document.getElementById('casesMillionChart'), 'Coronavirus - Cases per million', LOG_AXIS);
 
 // deathsChart
 const canvasDeathsChart = document.createElement('canvas');
 canvasDeathsChart.id="deathsChart";
 document.body.appendChild(canvasDeathsChart);
-var ctxDeathsChart = document.getElementById('deathsChart');
-var deathsChart = new Chart(ctxDeathsChart, {
-    type: 'line',
-    options: {
-        legend:legend,
-        responsive: true,
-        title: {
-            display: true,
-            text: 'Coronavirus - Deaths'
-        },
-        scales: scales
-    }
-});
+var deathsChart = createChart(document.getElementById('deathsChart'), 'Coronavirus - Deaths', LOG_AXIS);
 
 // deathsMillionChart
 const canvasDeathsMillionChart = document.createElement('canvas');
 canvasDeathsMillionChart.id="deathsMillionChart";
 document.body.appendChild(canvasDeathsMillionChart);
-var ctxDeathsMillionChart = document.getElementById('deathsMillionChart');
-var deathsMillionChart = new Chart(ctxDeathsMillionChart, {
-    type: 'line',
-    options: {
-        legend:legend,
-        responsive: true,
-        title: {
-            display: true,
-            text: 'Coronavirus - Deaths per million'
-        },
-        scales: scales
-    }
-});
+var deathsMillionChart = createChart(document.getElementById('deathsMillionChart'), 'Coronavirus - Deaths per million', LOG_AXIS);
 
 // ***********************************
 //
@@ -347,7 +281,7 @@ function processData() {
         startRawDataEpoch = timestamp(rawDateLabels[0]);
         endRawDataEpoch = timestamp(rawDateLabels[rawDateLabels.length-1]);
 
-        console.log(new Date(startRawDataEpoch));
+        // console.log(new Date(startRawDataEpoch));
         document.getElementById('eventstart').innerHTML = 'Start: ' + formatDate(new Date(startRawDataEpoch));
         document.getElementById('eventend').innerHTML = '  -  End: ' + formatDate(new Date(endRawDataEpoch));
 

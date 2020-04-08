@@ -1,4 +1,25 @@
+export function createChart(context, text, LOG_AXIS) {
 
+  var scales;
+  if (LOG_AXIS == "true") {
+      scales = scalesLog;
+  } else {
+      scales = scalesLin;
+  }
+
+  return new Chart(context, {
+    type: 'line',
+    options: {
+        legend:legend,
+        responsive: true,
+        title: {
+            display: true,
+            text: text
+        },
+        scales: scales
+    }
+});
+}
 // Add data into dataset
 export function addDataToDataset(dataset, label, data) {
   dataset.push({
@@ -20,6 +41,15 @@ export function updateChart(chart, labels, dataset, numCharts) {
       datasets: datasetResult
   };
   chart.update();
+}
+
+export function updateChartScale(chart, isLog) {
+    if ( isLog ) {
+        chart.options.scales = scalesLog;
+    } else {
+        chart.options.scales = scalesLin;
+    }
+    chart.update();
 }
 
 function compareMaxArray(a, b) {
@@ -59,14 +89,14 @@ function pointStyle(index) {
     return styles[index % styles.length];
 }
 
-export const legend = {
+const legend = {
   labels: {
       usePointStyle: true
   },
   position: 'right'
 };
 
-export const scalesLog = {
+const scalesLog = {
   xAxes: [{
       display: true,
   }],
@@ -86,7 +116,7 @@ export const scalesLog = {
   }]
 };
 
-export const scalesLin = {
+const scalesLin = {
   xAxes: [{
       display: true,
   }],
