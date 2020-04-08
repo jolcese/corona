@@ -60,6 +60,7 @@ We use [SemVer](http://semver.org/) for versioning.
 * Add continent to data and ability to select
 * Highlight (black) line when overing
 * Remove access to local storage on getSourceData
+* processData should receive Data object
 
 ## Authors
 

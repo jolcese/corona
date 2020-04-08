@@ -1,4 +1,6 @@
-export function createChart(context, text, LOG_AXIS) {
+import Chart from 'chart.js';
+
+export function createChart(container, text, LOG_AXIS) {
 
   var scales;
   if (LOG_AXIS == "true") {
@@ -7,7 +9,10 @@ export function createChart(context, text, LOG_AXIS) {
       scales = scalesLin;
   }
 
-  return new Chart(context, {
+  const canvasChart = document.createElement('canvas');
+  container.appendChild(canvasChart);
+
+  return new Chart(canvasChart, {
     type: 'line',
     options: {
         legend:legend,
