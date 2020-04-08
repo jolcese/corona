@@ -1,3 +1,4 @@
+import noUiSlider from 'nouislider';
 
 export function createInput(container, type, id, value, label ) {
   var input = document.createElement('input'); 
@@ -19,3 +20,19 @@ export function createInput(container, type, id, value, label ) {
 
   return input;
 }
+
+export function createInputSlider(container, id, options ) {
+
+  const inputSliderContainer = document.createElement('div');
+  inputSliderContainer.className = 'sliderspacing';
+  container.appendChild(inputSliderContainer);
+
+  const inputSlider = document.createElement('div');
+  inputSlider.id = id;
+  inputSliderContainer.appendChild(inputSlider)
+
+  noUiSlider.create(inputSlider, options);
+
+  return inputSlider
+}
+

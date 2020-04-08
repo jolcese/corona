@@ -7,7 +7,7 @@ import {cleanupCountriesData, calculatePerMillionData} from './dataHandler.js';
 import {createChart, addDataToDataset, updateChart, updateChartScale} from './chartHelper.js';
 import {getSourceData} from './sourceData.js';
 import {getLocalData, setLocalData} from './localStorage.js';
-import {createInput } from './inputElements.js';
+import {createInput, createInputSlider } from './inputElements.js';
 
 var MAX_NUM_CHARTS = 100;
 var REQUEST_DAYS = getLocalData('RequestDays', 365);
@@ -73,14 +73,7 @@ inputMinPerMillionAxis.onchange = function() {
 }
 
 // Slider number of countries
-const inputSliderContainer = document.createElement('div');
-inputSliderContainer.className = 'sliderspacing';
-controlBox.appendChild(inputSliderContainer);
-const inputSlider = document.createElement('div');
-inputSlider.id = "slider";
-inputSliderContainer.appendChild(inputSlider)
-
-noUiSlider.create(inputSlider, {
+const inputSlider = createInputSlider(controlBox, 'inputSlider', {
     start: NUM_CHARTS,
     range: {
         'min': 0,
@@ -94,8 +87,7 @@ noUiSlider.create(inputSlider, {
     format: wNumb({
         decimals: 0
     })
-});
-
+})
 inputSlider.noUiSlider.on('update', function() {
     if (initialized == true) {
         NUM_CHARTS = this.get();
@@ -105,31 +97,24 @@ inputSlider.noUiSlider.on('update', function() {
 });
 
 // Slider dates
-const datesSliderContainer = document.createElement('div');
-datesSliderContainer.className = 'sliderspacing';
-controlBox.appendChild(datesSliderContainer)
-const datesSlider = document.createElement('div');
-datesSlider.id = "datesSlider";
-datesSliderContainer.appendChild(datesSlider)
-
 var datesSliderinitialized = false;
 
-noUiSlider.create(datesSlider, {
+const datesSlider = createInputSlider(controlBox, 'datesSlider', {
     start: [timestamp('2019'),timestamp('2020')],
     range: {
         'min': timestamp('2019'),
         'max': timestamp('2020')
     },
-    step: 24 * 60 * 60 * 1000,
-    
+    step: 24 * 60 * 60 * 1000,   
 });
-const eventstart = document.createElement('span');
-eventstart.id = "eventstart";
-datesSliderContainer.appendChild(eventstart)
 
-const eventend = document.createElement('span');
-eventend.id = "eventend";
-datesSliderContainer.appendChild(eventend)
+// Slider dates labels
+const eventStartLabel = document.createElement('span');
+eventStartLabel.id = "eventStartLabel";
+datesSlider.appendChild(eventStartLabel)
+const eventEndLabel = document.createElement('span');
+eventEndLabel.id = "eventEndLabel";
+datesSlider.appendChild(eventEndLabel)
 
 var startGraphIndex, endGraphIndex = 0;
 var startRawDataIndex, endRawDataIndex = 0;
@@ -138,15 +123,14 @@ var startRawDataEpoch, endRawDataEpoch = 0;
 datesSlider.noUiSlider.on('update', function (values, handle) {
     if (datesSliderinitialized === true) {
         
-        document.getElementById('eventstart').innerHTML = 'Start: ' + formatDate(new Date(+values[0]));
-        document.getElementById('eventend').innerHTML = '  -  End: ' + formatDate(new Date(+values[1]));
+        eventStartLabel.innerHTML = 'Start: ' + formatDate(new Date(+values[0]));
+        eventEndLabel.innerHTML = '  -  End: ' + formatDate(new Date(+values[1]));
         
-        console.log(new Date(+values[0]));
+        // console.log(new Date(+values[0]));
         
         startGraphIndex = Math.floor((values[0] - startRawDataEpoch) / ((endRawDataEpoch - startRawDataEpoch) / endRawDataIndex));
         endGraphIndex = Math.floor((values[1] - startRawDataEpoch) / ((endRawDataEpoch - startRawDataEpoch) / endRawDataIndex));
         
-        console.log()
         processData();
     }
 });
@@ -216,8 +200,8 @@ function processData() {
         endRawDataEpoch = timestamp(rawDateLabels[rawDateLabels.length-1]);
         
         // console.log(new Date(startRawDataEpoch));
-        document.getElementById('eventstart').innerHTML = 'Start: ' + formatDate(new Date(startRawDataEpoch));
-        document.getElementById('eventend').innerHTML = '  -  End: ' + formatDate(new Date(endRawDataEpoch));
+        eventStartLabel.innerHTML = 'Start: ' + formatDate(new Date(startRawDataEpoch));
+        eventEndLabel.innerHTML = '  -  End: ' + formatDate(new Date(endRawDataEpoch));
         
         datesSliderinitialized = true;
     }
