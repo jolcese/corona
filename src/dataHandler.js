@@ -69,7 +69,7 @@ export function calculatePerMillionData(countryData, timelineType, CASE_MILLION_
       // console.log('Ignored: ' + country.country + ' - ' + country.province + ' - ' + populationObject[countryname])
   } 
   else {
-      perMillionData = perMillionData.map(x => (x * 1000000 / populationObject[countryName]).toFixed(2) >= MIN_VALUE_PER_MILLION ? (x * 1000000 / populationObject[countryName]).toFixed(2) : 0 ); 
+      perMillionData = perMillionData.map(x => parseFloat((x * 1000000 / populationObject[countryName]).toFixed(2)) >= MIN_VALUE_PER_MILLION ? parseFloat((x * 1000000 / populationObject[countryName]).toFixed(2)) : 0 ); 
   }
   return perMillionData;
 }
