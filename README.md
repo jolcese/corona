@@ -2,17 +2,21 @@
 
 There are a lot of websites with great statistics about progression of the disease but few include per million graphs. This work tries to fill that gap.
 
+This is a sample screenshot ![Alt text](doc/sample.png?raw=true "Screenshot")
+
+
 ## Getting Started
 
-TBD
+
 
 ### Prerequisites
 
-TBD
+`npm install` 
 
 ### Installing
 
-TBD
+You can generate the page with `npm run dev` or `webpack --mode development` 
+Then open with your favorite browser
 
 ## Running the tests
 
