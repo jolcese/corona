@@ -1,6 +1,7 @@
 import '../css/main.css';
 import noUiSlider from 'nouislider';
 import 'nouislider/distribute/nouislider.css';
+import population from '../data/countries-population.csv'
 import wNumb from 'wnumb';
 import {timestamp, formatDate} from './datesHelper.js';
 import {cleanupCountriesData, calculatePerMillionData} from './dataHandler.js';
@@ -14,7 +15,13 @@ var REQUEST_DAYS = getLocalData('RequestDays', 365);
 var NUM_CHARTS = getLocalData('NumGraphs', 10);
 var MIN_VALUE_PER_MILLION = getLocalData('MinPerMillion', 0.1);
 var CASE_MILLION_MIN_POPULATION = getLocalData('MinPopulation', 100000);
-var LOG_AXIS = getLocalData('LogAxis', "true");
+var LOG_AXIS = (getLocalData('LogAxis', 'true') == 'true');
+
+var CONTINENT_AFRICA = (getLocalData('ContinentAfrica', 'true') == 'true');
+var CONTINENT_AMERICAS = (getLocalData('ContinentAmericas', 'true') == 'true');
+var CONTINENT_ASIA = (getLocalData('ContinentAsia', 'true') == 'true');
+var CONTINENT_EUROPE = (getLocalData('ContinentEurope', 'true') == 'true');
+var CONTINENT_OCEANIA = (getLocalData('ContinentOceania', 'true') == 'true');
 
 var initialized = false;
 
@@ -30,7 +37,7 @@ controlBox.style.padding = "30px 20px 30px 20px";
 document.body.appendChild(controlBox);
 
 // Request Data for x days
-var inputPeriod = createInput(controlBox, 'value', 'inputPeriod', REQUEST_DAYS, 'Requested data for (days):');
+var inputPeriod = createInput(controlBox, 'value', 'inputPeriod', REQUEST_DAYS, 'Requested data for (days):', true);
 inputPeriod.onchange = function() {    
     if (initialized == true) {
         REQUEST_DAYS = this.value;
@@ -41,7 +48,7 @@ inputPeriod.onchange = function() {
 }
 
 // Minimum population for per million graphs
-var inputMinPerMillion = createInput(controlBox, 'value', 'inputMinPerMillion', CASE_MILLION_MIN_POPULATION, 'Min country population for per million graphs:');
+var inputMinPerMillion = createInput(controlBox, 'value', 'inputMinPerMillion', CASE_MILLION_MIN_POPULATION, 'Min country population for per million graphs:', true);
 inputMinPerMillion.onchange = function() {    
     if (initialized == true) {
         CASE_MILLION_MIN_POPULATION = this.value;
@@ -51,7 +58,7 @@ inputMinPerMillion.onchange = function() {
 }
 
 // Minimum value for per million graphs
-var inputMinPerMillionAxis = createInput(controlBox, 'value', 'inputMinPerMillionAxis', MIN_VALUE_PER_MILLION, 'Min Y-axis value for per million graphs:');
+var inputMinPerMillionAxis = createInput(controlBox, 'value', 'inputMinPerMillionAxis', MIN_VALUE_PER_MILLION, 'Min Y-axis value for per million graphs:', true);
 inputMinPerMillionAxis.onchange = function() {    
     if (initialized == true) {
         MIN_VALUE_PER_MILLION = this.value;
@@ -61,7 +68,7 @@ inputMinPerMillionAxis.onchange = function() {
 }
 
 // Log Checkbox
-var inputMinPerMillionAxis = createInput(controlBox, 'checkbox', 'logInputCheckbox', (LOG_AXIS == "true"), 'Log Y Axis');
+var inputMinPerMillionAxis = createInput(controlBox, 'checkbox', 'logInputCheckbox', LOG_AXIS, 'Log Y Axis', true);
 inputMinPerMillionAxis.onchange = function() {
     LOG_AXIS = this.checked;
     setLocalData('LogAxis', LOG_AXIS);
@@ -70,6 +77,52 @@ inputMinPerMillionAxis.onchange = function() {
     updateChartScale(casesMillionChart, this.checked);
     updateChartScale(deathsChart, this.checked);
     updateChartScale(deathsMillionChart, this.checked);
+}
+
+// Continents
+var africa = createInput(controlBox, 'checkbox', 'africa', CONTINENT_AFRICA, 'Africa', false);
+var america = createInput(controlBox, 'checkbox', 'america',  CONTINENT_AMERICAS, '| America', false);
+var asia = createInput(controlBox, 'checkbox', 'asia', CONTINENT_ASIA, '| Asia', false);
+var europe = createInput(controlBox, 'checkbox', 'europe', CONTINENT_EUROPE, '| Europe', false);
+var oceania = createInput(controlBox, 'checkbox', 'oceania', CONTINENT_OCEANIA, '| Oceania', true);
+
+var continentObject = {};
+population.forEach(country => continentObject[country[0]]=country[2]);
+
+africa.onchange = function() { 
+    if (initialized == true) {
+        CONTINENT_AFRICA = this.checked;
+        setLocalData('ContinentAfrica', CONTINENT_AFRICA);
+        processData();
+    }
+}
+america.onchange = function() { 
+    if (initialized == true) {
+        CONTINENT_AMERICAS = this.checked;
+        setLocalData('ContinentAmericas', CONTINENT_AMERICAS);
+        processData();
+    }
+}
+asia.onchange = function() { 
+if (initialized == true) {
+    CONTINENT_ASIA = this.checked;
+    setLocalData('ContinentAsia', CONTINENT_ASIA);
+    processData();
+}
+}
+europe.onchange = function() { 
+if (initialized == true) {
+    CONTINENT_EUROPE = this.checked;
+    setLocalData('ContinentEurope', CONTINENT_EUROPE);
+    processData();
+}
+}
+oceania.onchange = function() { 
+if (initialized == true) {
+    CONTINENT_OCEANIA = this.checked;
+    setLocalData('ContinentOceania', CONTINENT_OCEANIA);
+    processData();
+}
 }
 
 // Slider number of countries
@@ -222,11 +275,18 @@ function processData() {
     for (var slicedCountryData of slicedData) {
         
         const dataLabel = slicedCountryData.country;
-        
-        addDataToDataset(casesDatasets, dataLabel, Object.values(slicedCountryData.timeline.cases));
-        addDataToDataset(casesMillionDatasets, dataLabel, calculatePerMillionData(slicedCountryData, 'cases', CASE_MILLION_MIN_POPULATION, MIN_VALUE_PER_MILLION));
-        addDataToDataset(deathsDatasets, dataLabel, Object.values(slicedCountryData.timeline.deaths));
-        addDataToDataset(deathsMillionDatasets, dataLabel, calculatePerMillionData(slicedCountryData, 'deaths', CASE_MILLION_MIN_POPULATION, MIN_VALUE_PER_MILLION));
+
+        console.log(slicedCountryData.country + ' - ' + continentObject[slicedCountryData.country.toLowerCase()]);
+        if ((CONTINENT_AFRICA === true && continentObject[slicedCountryData.country.toLowerCase()] == 'Africa') || 
+        (CONTINENT_AMERICAS == true && continentObject[slicedCountryData.country.toLowerCase()] == 'Americas') ||
+        (CONTINENT_ASIA === true && continentObject[slicedCountryData.country.toLowerCase()] == 'Asia') ||
+        (CONTINENT_EUROPE === true && continentObject[slicedCountryData.country.toLowerCase()] == 'Europe') ||
+        (CONTINENT_OCEANIA === true && continentObject[slicedCountryData.country.toLowerCase()] == 'Oceania')) {
+            addDataToDataset(casesDatasets, dataLabel, Object.values(slicedCountryData.timeline.cases));
+            addDataToDataset(casesMillionDatasets, dataLabel, calculatePerMillionData(slicedCountryData, 'cases', CASE_MILLION_MIN_POPULATION, MIN_VALUE_PER_MILLION));
+            addDataToDataset(deathsDatasets, dataLabel, Object.values(slicedCountryData.timeline.deaths));
+            addDataToDataset(deathsMillionDatasets, dataLabel, calculatePerMillionData(slicedCountryData, 'deaths', CASE_MILLION_MIN_POPULATION, MIN_VALUE_PER_MILLION));    
+        }
     }
     
     updateChart(casesChart, slicedDateLabels, casesDatasets, NUM_CHARTS);

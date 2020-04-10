@@ -1,6 +1,6 @@
 import noUiSlider from 'nouislider';
 
-export function createInput(container, type, id, value, label ) {
+export function createInput(container, type, id, value, label, addBreak) {
   var input = document.createElement('input'); 
   input.type = type; 
   input.name = id; 
@@ -16,7 +16,7 @@ export function createInput(container, type, id, value, label ) {
 
   container.appendChild(inputLabel); 
   container.appendChild(input); 
-  container.appendChild(document.createElement("br"));
+  if (addBreak) container.appendChild(document.createElement("br"));
 
   return input;
 }

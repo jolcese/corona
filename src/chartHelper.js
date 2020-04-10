@@ -3,7 +3,7 @@ import Chart from 'chart.js';
 export function createChart(container, text, LOG_AXIS) {
 
   var scales;
-  if (LOG_AXIS == "true") {
+  if (LOG_AXIS === true) {
       scales = scalesLog;
   } else {
       scales = scalesLin;

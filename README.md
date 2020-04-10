@@ -35,6 +35,8 @@ TBD
 
 We use [SemVer](http://semver.org/) for versioning.
 
+* 0.0.7 Minor bug fixes
+  * ~~Add continent to data and ability to select~~
 * 0.0.6 Refactor into different modules
   * ~~Deduplicate countries array~~
   * ~~Fixed Initialize slider text on load~~
@@ -57,7 +59,6 @@ We use [SemVer](http://semver.org/) for versioning.
 
 ## TO DO
 * Add graphs starting at n th case / n th death
-* Add continent to data and ability to select
 * Highlight (black) line when overing
 * Remove access to local storage on getSourceData
 * processData should receive Data object
