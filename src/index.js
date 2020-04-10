@@ -135,6 +135,27 @@ datesSlider.noUiSlider.on('update', function (values, handle) {
     }
 });
 
+function initializeDatesSlider(rawDateLabels) {
+    datesSlider.noUiSlider.updateOptions({
+        range: {
+            'min': timestamp(rawDateLabels[0]),
+            'max': timestamp(rawDateLabels[rawDateLabels.length-1])
+        },
+        start: [timestamp(rawDateLabels[0]),timestamp(rawDateLabels[rawDateLabels.length-1])]
+    });
+    // console.log('Slider: 0 - ' + String(rawDateLabels.length-1));
+    
+    startRawDataIndex = startGraphIndex = 0;
+    endRawDataIndex = endGraphIndex = rawDateLabels.length;
+    
+    startRawDataEpoch = timestamp(rawDateLabels[0]);
+    endRawDataEpoch = timestamp(rawDateLabels[rawDateLabels.length-1]);
+    
+    // console.log(new Date(startRawDataEpoch));
+    eventStartLabel.innerHTML = 'Start: ' + formatDate(new Date(startRawDataEpoch));
+    eventEndLabel.innerHTML = '  -  End: ' + formatDate(new Date(endRawDataEpoch));
+}
+
 // ***********************************
 //
 // Charts setup
@@ -184,36 +205,18 @@ function processData() {
     rawDateLabels = Object.keys(storedData[0].timeline.cases);
     
     if (datesSliderinitialized === false) {
-        datesSlider.noUiSlider.updateOptions({
-            range: {
-                'min': timestamp(rawDateLabels[0]),
-                'max': timestamp(rawDateLabels[rawDateLabels.length-1])
-            },
-            start: [timestamp(rawDateLabels[0]),timestamp(rawDateLabels[rawDateLabels.length-1])]
-        });
-        console.log('Slider: 0 - ' + String(rawDateLabels.length-1));
-        
-        startRawDataIndex = startGraphIndex = 0;
-        endRawDataIndex = endGraphIndex = rawDateLabels.length;
-        
-        startRawDataEpoch = timestamp(rawDateLabels[0]);
-        endRawDataEpoch = timestamp(rawDateLabels[rawDateLabels.length-1]);
-        
-        // console.log(new Date(startRawDataEpoch));
-        eventStartLabel.innerHTML = 'Start: ' + formatDate(new Date(startRawDataEpoch));
-        eventEndLabel.innerHTML = '  -  End: ' + formatDate(new Date(endRawDataEpoch));
-        
+        initializeDatesSlider(rawDateLabels);
         datesSliderinitialized = true;
     }
     
     slicedDateLabels = rawDateLabels.slice(startGraphIndex, endGraphIndex);
     
+    const slicedData = cleanupCountriesData(storedData, startGraphIndex, endGraphIndex);
+
     var casesDatasets = [];
     var casesMillionDatasets = [];
     var deathsDatasets = [];
     var deathsMillionDatasets = [];
-    
-    const slicedData = cleanupCountriesData(storedData, startGraphIndex, endGraphIndex);
     
     // Generate datasets
     for (var slicedCountryData of slicedData) {
