@@ -1,10 +1,10 @@
 import '../css/main.css';
 import noUiSlider from 'nouislider';
 import 'nouislider/distribute/nouislider.css';
-import population from '../data/countries-population.csv'
+import countriesData from '../data/countries-data.csv'
 import wNumb from 'wnumb';
 import {timestamp, formatDate} from './datesHelper.js';
-import {cleanupCountriesData, calculatePerMillionData} from './dataHandler.js';
+import {sliceCountries, sliceTimelineAfterThreshold, mergeProvincesAndSeparateColonies, calculatePerMillionData} from './dataHandler.js';
 import {createChart, addDataToDataset, updateChart, updateChartScale} from './chartHelper.js';
 import {getSourceData} from './sourceData.js';
 import {getLocalData, setLocalData} from './localStorage.js';
@@ -13,9 +13,13 @@ import {createInput, createInputSlider } from './inputElements.js';
 var MAX_NUM_CHARTS = 100;
 var REQUEST_DAYS = getLocalData('RequestDays', 365);
 var NUM_CHARTS = getLocalData('NumGraphs', 10);
-var MIN_VALUE_PER_MILLION = getLocalData('MinPerMillion', 0.1);
-var CASE_MILLION_MIN_POPULATION = getLocalData('MinPopulation', 100000);
+var MIN_PER_MILLION_THRESHOLD = getLocalData('MinPerMillion', 0.1);
+var MIN_POPULATION = getLocalData('MinPopulation', 100000);
 var LOG_AXIS = (getLocalData('LogAxis', 'true') == 'true');
+var THRESHOLD_CASES_NTH = getLocalData('ThresholdCases', 500);
+var THRESHOLD_DEATHS_NTH = getLocalData('ThresholdDeaths', 100);
+var THRESHOLD_CASES_MILLION_NTH = getLocalData('ThresholdCasesMillion', 50);
+var THRESHOLD_DEATHS_MILLION_NTH = getLocalData('ThresholdDeathsMillion', 5);
 
 var CONTINENT_AFRICA = (getLocalData('ContinentAfrica', 'true') == 'true');
 var CONTINENT_AMERICAS = (getLocalData('ContinentAmericas', 'true') == 'true');
@@ -48,21 +52,61 @@ inputPeriod.onchange = function() {
 }
 
 // Minimum population for per million graphs
-var inputMinPerMillion = createInput(controlBox, 'value', 'inputMinPerMillion', CASE_MILLION_MIN_POPULATION, 'Min country population for per million graphs:', true);
+var inputMinPerMillion = createInput(controlBox, 'value', 'inputMinPerMillion', MIN_POPULATION, 'Min country population for per million graphs:', true);
 inputMinPerMillion.onchange = function() {    
     if (initialized == true) {
-        CASE_MILLION_MIN_POPULATION = this.value;
-        setLocalData('MinPopulation', CASE_MILLION_MIN_POPULATION);
+        MIN_POPULATION = this.value;
+        setLocalData('MinPopulation', MIN_POPULATION);
         processData();
     }     
 }
 
 // Minimum value for per million graphs
-var inputMinPerMillionAxis = createInput(controlBox, 'value', 'inputMinPerMillionAxis', MIN_VALUE_PER_MILLION, 'Min Y-axis value for per million graphs:', true);
+var inputMinPerMillionAxis = createInput(controlBox, 'value', 'inputMinPerMillionAxis', MIN_PER_MILLION_THRESHOLD, 'Min Y-axis value for per million graphs:', true);
 inputMinPerMillionAxis.onchange = function() {    
     if (initialized == true) {
-        MIN_VALUE_PER_MILLION = this.value;
-        setLocalData('MinPerMillion', MIN_VALUE_PER_MILLION);
+        MIN_PER_MILLION_THRESHOLD = this.value;
+        setLocalData('MinPerMillion', MIN_PER_MILLION_THRESHOLD);
+        processData();
+    }    
+}
+
+// Threshold for cases Graph
+var inputThresholdCasesNth = createInput(controlBox, 'value', 'inputThresholdCasesNth', THRESHOLD_CASES_NTH, 'Starting value for after nth cases graph:', true);
+inputThresholdCasesNth.onchange = function() {    
+    if (initialized == true) {
+        THRESHOLD_CASES_NTH = this.value;
+        setLocalData('ThresholdCases', THRESHOLD_CASES_NTH);
+        processData();
+    }    
+}
+
+// Threshold for cases Million Graph
+var inputThresholdCasesMillionNth = createInput(controlBox, 'value', 'inputThresholdCasesMillionNth', THRESHOLD_CASES_MILLION_NTH, 'Starting value for after nth cases Million graph:', true);
+inputThresholdCasesMillionNth.onchange = function() {    
+    if (initialized == true) {
+        THRESHOLD_CASES_MILLION_NTH = this.value;
+        setLocalData('ThresholdCasesMillion', THRESHOLD_CASES_MILLION_NTH);
+        processData();
+    }    
+}
+
+// Threshold for deaths Graph
+var inputThresholdDeathsNth = createInput(controlBox, 'value', 'inputThresholdDeathsNth', THRESHOLD_DEATHS_NTH, 'Starting value for after nth deaths graph:', true);
+inputThresholdDeathsNth.onchange = function() {    
+    if (initialized == true) {
+        THRESHOLD_DEATHS_NTH = this.value;
+        setLocalData('ThresholdDeaths', THRESHOLD_DEATHS_NTH);
+        processData();
+    }    
+}
+
+// Threshold for deaths Million Graph
+var inputThresholdDeathsMillionNth = createInput(controlBox, 'value', 'inputThresholdDeathsMillionNth', THRESHOLD_DEATHS_MILLION_NTH, 'Starting value for after nth deaths million graph:', true);
+inputThresholdDeathsMillionNth.onchange = function() {    
+    if (initialized == true) {
+        THRESHOLD_DEATHS_MILLION_NTH = this.value;
+        setLocalData('ThresholdDeathsMillion', THRESHOLD_DEATHS_MILLION_NTH);
         processData();
     }    
 }
@@ -74,9 +118,13 @@ inputMinPerMillionAxis.onchange = function() {
     setLocalData('LogAxis', LOG_AXIS);
     
     updateChartScale(casesChart, this.checked);
+    updateChartScale(casesAfterChart, this.checked);
     updateChartScale(casesMillionChart, this.checked);
+    updateChartScale(casesMillionAfterChart, this.checked);
     updateChartScale(deathsChart, this.checked);
+    updateChartScale(deathsAfterChart, this.checked);
     updateChartScale(deathsMillionChart, this.checked);
+    updateChartScale(deathsMillionAfterChart, this.checked);
 }
 
 // Continents
@@ -86,8 +134,11 @@ var asia = createInput(controlBox, 'checkbox', 'asia', CONTINENT_ASIA, '| Asia',
 var europe = createInput(controlBox, 'checkbox', 'europe', CONTINENT_EUROPE, '| Europe', false);
 var oceania = createInput(controlBox, 'checkbox', 'oceania', CONTINENT_OCEANIA, '| Oceania', true);
 
+var populationObject = {};
+countriesData.forEach(country => populationObject[country[0]]=country[1]);
+
 var continentObject = {};
-population.forEach(country => continentObject[country[0]]=country[2]);
+countriesData.forEach(country => continentObject[country[0]]=country[2]);
 
 africa.onchange = function() { 
     if (initialized == true) {
@@ -217,12 +268,20 @@ function initializeDatesSlider(rawDateLabels) {
 
 // casesChart
 var casesChart = createChart(document.body, 'Coronavirus - Cases', LOG_AXIS);
+// casesAfterChart
+var casesAfterChart = createChart(document.body, 'Coronavirus - Cases after ' + THRESHOLD_CASES_NTH + 'th case', LOG_AXIS);
 // casesMillionChart
 var casesMillionChart = createChart(document.body, 'Coronavirus - Cases per million', LOG_AXIS);
+// casesMillionAfterChart
+var casesMillionAfterChart = createChart(document.body, 'Coronavirus - Cases per million after ' + THRESHOLD_CASES_MILLION_NTH + 'th cases per million', LOG_AXIS);
 // deathsChart
 var deathsChart = createChart(document.body, 'Coronavirus - Deaths', LOG_AXIS);
+// deathsAfterChart
+var deathsAfterChart = createChart(document.body, 'Coronavirus - Deaths after ' + THRESHOLD_DEATHS_NTH + 'th death', LOG_AXIS);
 // deathsMillionChart
 var deathsMillionChart = createChart(document.body, 'Coronavirus - Deaths per million', LOG_AXIS);
+// deathsMillionAfterChart
+var deathsMillionAfterChart = createChart(document.body, 'Coronavirus - CasDeathses per million after ' + THRESHOLD_DEATHS_MILLION_NTH + 'th deaths per million', LOG_AXIS);
 
 // ***********************************
 //
@@ -264,8 +323,9 @@ function processData() {
     
     slicedDateLabels = rawDateLabels.slice(startGraphIndex, endGraphIndex);
     
-    const slicedData = cleanupCountriesData(storedData, startGraphIndex, endGraphIndex);
-
+    const mergedData = mergeProvincesAndSeparateColonies(storedData);
+    const slicedData = sliceCountries(mergedData, startGraphIndex, endGraphIndex);
+    
     var casesDatasets = [];
     var casesMillionDatasets = [];
     var deathsDatasets = [];
@@ -276,23 +336,91 @@ function processData() {
         
         const dataLabel = slicedCountryData.country;
 
-        console.log(slicedCountryData.country + ' - ' + continentObject[slicedCountryData.country.toLowerCase()]);
-        if ((CONTINENT_AFRICA === true && continentObject[slicedCountryData.country.toLowerCase()] == 'Africa') || 
-        (CONTINENT_AMERICAS == true && continentObject[slicedCountryData.country.toLowerCase()] == 'Americas') ||
-        (CONTINENT_ASIA === true && continentObject[slicedCountryData.country.toLowerCase()] == 'Asia') ||
-        (CONTINENT_EUROPE === true && continentObject[slicedCountryData.country.toLowerCase()] == 'Europe') ||
-        (CONTINENT_OCEANIA === true && continentObject[slicedCountryData.country.toLowerCase()] == 'Oceania')) {
-            addDataToDataset(casesDatasets, dataLabel, Object.values(slicedCountryData.timeline.cases));
-            addDataToDataset(casesMillionDatasets, dataLabel, calculatePerMillionData(slicedCountryData, 'cases', CASE_MILLION_MIN_POPULATION, MIN_VALUE_PER_MILLION));
-            addDataToDataset(deathsDatasets, dataLabel, Object.values(slicedCountryData.timeline.deaths));
-            addDataToDataset(deathsMillionDatasets, dataLabel, calculatePerMillionData(slicedCountryData, 'deaths', CASE_MILLION_MIN_POPULATION, MIN_VALUE_PER_MILLION));    
+        // console.log(slicedCountryData.country + ' - ' + continentObject[slicedCountryData.country.toLowerCase()]);
+        if (addCountry(continentObject[slicedCountryData.country.toLowerCase()])) {
+
+            var population = populationObject[slicedCountryData.country.toLowerCase()];
+
+            addDataToDataset(casesDatasets, dataLabel, slicedCountryData.timeline.cases);
+            addDataToDataset(casesMillionDatasets, dataLabel, calculatePerMillionData(slicedCountryData.timeline.cases, population, MIN_POPULATION, MIN_PER_MILLION_THRESHOLD));
+            addDataToDataset(deathsDatasets, dataLabel, slicedCountryData.timeline.deaths);
+            addDataToDataset(deathsMillionDatasets, dataLabel, calculatePerMillionData(slicedCountryData.timeline.deaths, population, MIN_POPULATION, MIN_PER_MILLION_THRESHOLD));    
         }
     }
-    
+
     updateChart(casesChart, slicedDateLabels, casesDatasets, NUM_CHARTS);
     updateChart(casesMillionChart, slicedDateLabels, casesMillionDatasets, NUM_CHARTS);
     updateChart(deathsChart, slicedDateLabels, deathsDatasets, NUM_CHARTS);
     updateChart(deathsMillionChart, slicedDateLabels, deathsMillionDatasets, NUM_CHARTS);
+
+    var maxCasesDay = 0;
+    var maxCasesMillonDay = 0;
+    var maxDeathsDay = 0;
+    var maxDeathsMillionDay = 0;
+    
+    var casesAfterDatasets = [];
+    var casesMillionAfterDatasets = [];
+    var deathsAfterDatasets = [];
+    var deathsMillionAfterDatasets = [];
+
+    // Generate datasets
+    for (var countryData of mergedData) {
+        
+        const dataLabel = countryData.country;
+
+        // console.log(slicedAfterCountryData.country + ' - ' + continentObject[slicedAfterCountryData.country.toLowerCase()]);
+        if (addCountry(continentObject[countryData.country.toLowerCase()])) {
+            
+            var population = populationObject[countryData.country.toLowerCase()];
+
+            var casesSlicedTimeline = sliceTimelineAfterThreshold(countryData.timeline.cases, THRESHOLD_CASES_NTH);
+            var casesMillionSlicedTimeline = sliceTimelineAfterThreshold(calculatePerMillionData(countryData.timeline.cases, population, MIN_POPULATION, MIN_PER_MILLION_THRESHOLD), THRESHOLD_CASES_MILLION_NTH);
+            var deathsSlicedTimeline = sliceTimelineAfterThreshold(countryData.timeline.deaths, THRESHOLD_DEATHS_NTH);
+            var deathsMillionSlicedTimeline = sliceTimelineAfterThreshold(calculatePerMillionData(countryData.timeline.deaths, population, MIN_POPULATION, MIN_PER_MILLION_THRESHOLD), THRESHOLD_DEATHS_MILLION_NTH);
+
+            var casesLength = Object.keys(casesSlicedTimeline).length;
+            var casesMillionLength = Object.keys(casesMillionSlicedTimeline).length;
+            var deathsLength = Object.keys(deathsSlicedTimeline).length;
+            var deathsMillionLength = Object.keys(deathsMillionSlicedTimeline).length;
+
+            if (casesLength > maxCasesDay) maxCasesDay = casesLength;
+            if (casesMillionLength > maxCasesMillonDay) maxCasesMillonDay = casesMillionLength;
+            if (deathsLength > maxDeathsDay) maxDeathsDay = deathsLength;
+            if (deathsMillionLength > maxDeathsMillionDay) maxDeathsMillionDay = deathsMillionLength;
+
+            if (casesLength > 0) {
+                addDataToDataset(casesAfterDatasets, dataLabel, casesSlicedTimeline);
+            }
+            if (casesMillionLength > 0) {
+                addDataToDataset(casesMillionAfterDatasets, dataLabel, casesMillionSlicedTimeline);
+            }
+            if (deathsLength > 0) {
+                addDataToDataset(deathsAfterDatasets, dataLabel, deathsSlicedTimeline);
+            }
+            if (deathsMillionLength > 0) {
+                addDataToDataset(deathsMillionAfterDatasets, dataLabel, deathsMillionSlicedTimeline);
+            }
+
+        }
+    }
+    
+    var casesDaysLabels = Array.from(Array(maxCasesDay).keys());
+    var casesMillionDaysLabels = Array.from(Array(maxCasesMillonDay).keys());
+    var deathsDaysLabels = Array.from(Array(maxDeathsDay).keys());
+    var deathsMillionDaysLabels = Array.from(Array(maxDeathsMillionDay).keys());
+
+    updateChart(casesAfterChart, casesDaysLabels, casesAfterDatasets, NUM_CHARTS);
+    updateChart(casesMillionAfterChart, casesMillionDaysLabels, casesMillionAfterDatasets, NUM_CHARTS);
+    updateChart(deathsAfterChart, deathsDaysLabels, deathsAfterDatasets, NUM_CHARTS);
+    updateChart(deathsMillionAfterChart, deathsMillionDaysLabels, deathsMillionAfterDatasets, NUM_CHARTS);
     
     initialized = true;
+}
+
+function addCountry(continent) {
+    return ((CONTINENT_AFRICA === true && continent == 'Africa') || 
+    (CONTINENT_AMERICAS == true && continent == 'Americas') ||
+    (CONTINENT_ASIA === true && continent == 'Asia') ||
+    (CONTINENT_EUROPE === true && continent == 'Europe') ||
+    (CONTINENT_OCEANIA === true && continent == 'Oceania')); 
 }

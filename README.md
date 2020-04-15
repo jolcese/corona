@@ -39,6 +39,12 @@ TBD
 
 We use [SemVer](http://semver.org/) for versioning.
 
+* 0.0.8
+  * ~~Add graphs starting at n th case / n th death~~
+  * ~~Fix x axis values for n graphs~~
+  * ~~Remove data with 0 data for n graphs~~
+  * ~~Add per million nth graph~~
+
 * 0.0.7 Minor bug fixes
   * ~~Add continent to data and ability to select~~
 * 0.0.6 Refactor into different modules
@@ -62,10 +68,13 @@ We use [SemVer](http://semver.org/) for versioning.
 * 0.0.1 - Initial version
 
 ## TO DO
-* Add graphs starting at n th case / n th death
 * Highlight (black) line when overing
 * Remove access to local storage on getSourceData
 * processData should receive Data object
+* Fix grapth title for n graphs
+* Fix min Y for cases 4 & 8
+* Fix max X for cases n graph (max is calculated before limiting # of graphs)
+* Fix lowercase
 
 ## Authors
 

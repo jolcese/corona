@@ -71,7 +71,7 @@ function processCountries(req) {
   Promise.all(promises).then(results => {
 
     Object.keys(countriesResult).sort().forEach( country => {
-      fs.appendFileSync('./data/countries-population.csv', '"' + country.toLowerCase() + '",' + countriesResult[country].population + ',' + countriesResult[country].continent + '\n');
+      fs.appendFileSync('./data/countries-data.csv', '"' + country.toLowerCase() + '",' + countriesResult[country].population + ',' + countriesResult[country].continent + '\n');
     })
   });
 }

@@ -1,95 +1,120 @@
-import population from '../data/countries-population.csv'
+// Returs an slice of a country's timeline
+export function sliceCountries(rawCountriesData, start, end) {
+
+    var slicedCountriesData = [];
+    for (var rawCountryData of rawCountriesData) {
+
+        var tempCountryData = JSON.parse(JSON.stringify(rawCountryData));
+        var slicedTimeline = {};
+        
+        for (var type of ['cases','deaths','recovered']) {
+            var obj = {};
+            var idx = 0;
+            for (var key of Object.keys(rawCountryData.timeline[type])) 
+            {
+                if (start <= idx && end >= idx) obj[key] = rawCountryData.timeline[type][key];
+                idx++;
+            }
+            slicedTimeline[type] = obj;
+        }
+        tempCountryData.timeline = slicedTimeline;
+
+        slicedCountriesData.push(tempCountryData);
+
+    }
+    return slicedCountriesData;
+}
+
+// Returs an slice of a timeline above a threshold
+export function sliceTimelineAfterThreshold(timeline, threshold) {
+
+    var slicedTimeline = {};
+    var obj = {};
+    var idx = 0;
+    var found = false;
+
+    for (var key of Object.keys(timeline)) 
+    {
+        if (timeline[key] >= threshold || found === true) {
+            slicedTimeline[idx] = timeline[key];
+            found = true;
+            idx++;
+        }
+    }
+
+    return slicedTimeline
+}
+
 
 // Merge countries with provinces and separate colonies
-export function cleanupCountriesData(rawCountriesData, start, end) {
+export function mergeProvincesAndSeparateColonies(rawCountriesData) {
 
-  var cleanedCountriesData = [];
-  for (var rawCountryData of rawCountriesData) {
-
-      var countryName = rawCountryData.country.toLowerCase();
-      var tempCountryData;
-      
-      if (countryName == 'france' || countryName == 'uk' || countryName == 'denmark' || countryName == 'netherlands') {
-          // Countries with colonies
-          // Will split colonies into their own countries.
-
-          tempCountryData = rawCountryData;
-
-          if (rawCountryData.province)
-          {
+    var cleanedCountriesData = [];
+    for (var rawCountryData of rawCountriesData) {
+  
+        var countryName = rawCountryData.country.toLowerCase();
+        var tempCountryData;
+        
+        if (countryName == 'france' || countryName == 'uk' || countryName == 'denmark' || countryName == 'netherlands') {
+            // Countries with colonies
+            // Will split colonies into their own countries.
+  
             tempCountryData = rawCountryData;
-            tempCountryData.country = tempCountryData.province;
+  
+            if (rawCountryData.province)
+            {
+              tempCountryData = rawCountryData;
+              tempCountryData.country = tempCountryData.province;
+              tempCountryData.province = null;
+            }
+            cleanedCountriesData.push(tempCountryData);
+  
+        }
+        else if (countryName == 'china' || countryName == 'australia' || countryName == 'canada') {
+            // Countries with provinces/states
+            // We'll add all provinces into one.
+            tempCountryData = rawCountryData;
             tempCountryData.province = null;
-          }
-          tempCountryData.timeline = sliceTimeline(tempCountryData.timeline, start, end);
-          cleanedCountriesData.push(tempCountryData);
-
-      }
-      else if (countryName == 'china' || countryName == 'australia' || countryName == 'canada') {
-          // Countries with provinces/states
-          // We'll add all provinces into one.
-          tempCountryData = rawCountryData;
-          tempCountryData.province = null;
-
-          var foundAndAppended = false;
-          for (var idx = 0; idx < cleanedCountriesData.length; idx++) {
-              if (cleanedCountriesData[idx].country === tempCountryData.country) {
-
-                cleanedCountriesData[idx].timeline = addTimelines(cleanedCountriesData[idx].timeline, sliceTimeline(tempCountryData.timeline, start, end));
-
-                  foundAndAppended = true;
-              }
-          }
-          if (!foundAndAppended) {
-              rawCountryData.timeline = sliceTimeline(rawCountryData.timeline, start, end);
-              cleanedCountriesData.push(tempCountryData)
-          }
-      }
-      else {
-          // All other countries
-          rawCountryData.timeline = sliceTimeline(rawCountryData.timeline, start, end);
-          cleanedCountriesData.push(rawCountryData);
-      }
+  
+            var foundAndAppended = false;
+            for (var idx = 0; idx < cleanedCountriesData.length; idx++) {
+                if (cleanedCountriesData[idx].country === tempCountryData.country) {
+  
+                    cleanedCountriesData[idx].timeline = addTimelines(cleanedCountriesData[idx].timeline, tempCountryData.timeline);
+                    foundAndAppended = true;
+                }
+            }
+            if (!foundAndAppended) {
+                cleanedCountriesData.push(tempCountryData)
+            }
+        }
+        else {
+            // All other countries
+            cleanedCountriesData.push(rawCountryData);
+        }
+    }
+    return cleanedCountriesData;
   }
-  return cleanedCountriesData;
-}
+
 
 // Update data to per million
-export function calculatePerMillionData(countryData, timelineType, CASE_MILLION_MIN_POPULATION, MIN_VALUE_PER_MILLION) {
+export function calculatePerMillionData(timeline, population, MIN_POPULATION, MIN_PER_MILLION_THRESHOLD) {
 
-    var populationObject = {};
-  population.forEach(country => populationObject[country[0]]=country[1]);
+    // var populationObject = {};
+    // population.forEach(country => populationObject[country[0]]=country[1]);
 
-  var perMillionData = Object.values(countryData.timeline[timelineType]);
-  var countryName = countryData.country.toLowerCase();
-  
-  if ((countryData.province !== null && countryData.province != countryData.country ) || populationObject[countryName] == undefined || parseInt(populationObject[countryName]) < parseInt(CASE_MILLION_MIN_POPULATION))
-  {
-      perMillionData = perMillionData.map(x => x * 0); 
-      // console.log('Ignored: ' + country.country + ' - ' + country.province + ' - ' + populationObject[countryname])
-  } 
-  else {
-      perMillionData = perMillionData.map(x => parseFloat((x * 1000000 / populationObject[countryName]).toFixed(2)) >= MIN_VALUE_PER_MILLION ? parseFloat((x * 1000000 / populationObject[countryName]).toFixed(2)) : 0 ); 
-  }
-  return perMillionData;
-}
-
-// Returs a subset of a timeline
-function sliceTimeline(timeline, start, end) {
-
-  var returnTimeline = {};
-  
-  for (var type of ['cases','deaths','recovered']) {
-      var obj = {};
-      var idx = 0;
-      for (var key of Object.keys(timeline[type])) 
-      {
-          if (start <= idx && end >= idx) obj[key] = timeline[type][key];
-          idx++;
-      }
-      returnTimeline[type] = obj;
-  }
-  return (returnTimeline);
+    var perMillionData = Object.values(timeline);
+    // var countryName = countryData.country.toLowerCase();
+    
+    if (population == undefined || parseInt(population) < parseInt(MIN_POPULATION))
+    {
+        perMillionData = perMillionData.map(x => x * 0); 
+        // console.log('Ignored: ' + countryData.country + ' - ' + countryData.province + ' - ' + population)
+    } 
+    else {
+        perMillionData = perMillionData.map(x => parseFloat((x * 1000000 / population).toFixed(2)) >= MIN_PER_MILLION_THRESHOLD ? parseFloat((x * 1000000 / population).toFixed(2)) : 0 ); 
+    }
+    return perMillionData;
 }
 
 // Adds two timelines
