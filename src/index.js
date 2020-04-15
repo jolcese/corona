@@ -72,7 +72,7 @@ inputMinPerMillionAxis.onchange = function() {
 }
 
 // Threshold for cases Graph
-var inputThresholdCasesNth = createInput(controlBox, 'value', 'inputThresholdCasesNth', THRESHOLD_CASES_NTH, 'Starting value for after nth cases graph:', true);
+var inputThresholdCasesNth = createInput(controlBox, 'value', 'inputThresholdCasesNth', THRESHOLD_CASES_NTH, 'N1: Starting value for after nth cases graph:', true);
 inputThresholdCasesNth.onchange = function() {    
     if (initialized == true) {
         THRESHOLD_CASES_NTH = this.value;
@@ -82,7 +82,7 @@ inputThresholdCasesNth.onchange = function() {
 }
 
 // Threshold for cases Million Graph
-var inputThresholdCasesMillionNth = createInput(controlBox, 'value', 'inputThresholdCasesMillionNth', THRESHOLD_CASES_MILLION_NTH, 'Starting value for after nth cases Million graph:', true);
+var inputThresholdCasesMillionNth = createInput(controlBox, 'value', 'inputThresholdCasesMillionNth', THRESHOLD_CASES_MILLION_NTH, 'N2: Starting value for after nth cases Million graph:', true);
 inputThresholdCasesMillionNth.onchange = function() {    
     if (initialized == true) {
         THRESHOLD_CASES_MILLION_NTH = this.value;
@@ -92,7 +92,7 @@ inputThresholdCasesMillionNth.onchange = function() {
 }
 
 // Threshold for deaths Graph
-var inputThresholdDeathsNth = createInput(controlBox, 'value', 'inputThresholdDeathsNth', THRESHOLD_DEATHS_NTH, 'Starting value for after nth deaths graph:', true);
+var inputThresholdDeathsNth = createInput(controlBox, 'value', 'inputThresholdDeathsNth', THRESHOLD_DEATHS_NTH, 'N3: Starting value for after nth deaths graph:', true);
 inputThresholdDeathsNth.onchange = function() {    
     if (initialized == true) {
         THRESHOLD_DEATHS_NTH = this.value;
@@ -102,7 +102,7 @@ inputThresholdDeathsNth.onchange = function() {
 }
 
 // Threshold for deaths Million Graph
-var inputThresholdDeathsMillionNth = createInput(controlBox, 'value', 'inputThresholdDeathsMillionNth', THRESHOLD_DEATHS_MILLION_NTH, 'Starting value for after nth deaths million graph:', true);
+var inputThresholdDeathsMillionNth = createInput(controlBox, 'value', 'inputThresholdDeathsMillionNth', THRESHOLD_DEATHS_MILLION_NTH, 'N4: Starting value for after nth deaths million graph:', true);
 inputThresholdDeathsMillionNth.onchange = function() {    
     if (initialized == true) {
         THRESHOLD_DEATHS_MILLION_NTH = this.value;
@@ -269,19 +269,23 @@ function initializeDatesSlider(rawDateLabels) {
 // casesChart
 var casesChart = createChart(document.body, 'Coronavirus - Cases', LOG_AXIS);
 // casesAfterChart
-var casesAfterChart = createChart(document.body, 'Coronavirus - Cases after ' + THRESHOLD_CASES_NTH + 'th case', LOG_AXIS);
+// var casesAfterChart = createChart(document.body, 'Coronavirus - Cases after reaching ' + THRESHOLD_CASES_NTH + ' cases', LOG_AXIS);
+var casesAfterChart = createChart(document.body, 'Coronavirus - Cases after reaching N1 cases', LOG_AXIS);
 // casesMillionChart
 var casesMillionChart = createChart(document.body, 'Coronavirus - Cases per million', LOG_AXIS);
 // casesMillionAfterChart
-var casesMillionAfterChart = createChart(document.body, 'Coronavirus - Cases per million after ' + THRESHOLD_CASES_MILLION_NTH + 'th cases per million', LOG_AXIS);
+// var casesMillionAfterChart = createChart(document.body, 'Coronavirus - Cases per million after reaching ' + THRESHOLD_CASES_MILLION_NTH + ' cases per million', LOG_AXIS);
+var casesMillionAfterChart = createChart(document.body, 'Coronavirus - Cases per million after reaching N2 cases per million', LOG_AXIS);
 // deathsChart
 var deathsChart = createChart(document.body, 'Coronavirus - Deaths', LOG_AXIS);
 // deathsAfterChart
-var deathsAfterChart = createChart(document.body, 'Coronavirus - Deaths after ' + THRESHOLD_DEATHS_NTH + 'th death', LOG_AXIS);
+// var deathsAfterChart = createChart(document.body, 'Coronavirus - Deaths after reaching ' + THRESHOLD_DEATHS_NTH + ' deaths', LOG_AXIS);
+var deathsAfterChart = createChart(document.body, 'Coronavirus - Deaths after reaching N3 deaths', LOG_AXIS);
 // deathsMillionChart
 var deathsMillionChart = createChart(document.body, 'Coronavirus - Deaths per million', LOG_AXIS);
 // deathsMillionAfterChart
-var deathsMillionAfterChart = createChart(document.body, 'Coronavirus - CasDeathses per million after ' + THRESHOLD_DEATHS_MILLION_NTH + 'th deaths per million', LOG_AXIS);
+// var deathsMillionAfterChart = createChart(document.body, 'Coronavirus - Deaths per million after reaching ' + THRESHOLD_DEATHS_MILLION_NTH + ' deaths per million', LOG_AXIS);
+var deathsMillionAfterChart = createChart(document.body, 'Coronavirus - Deaths per million after reaching N4 deaths per million', LOG_AXIS);
 
 // ***********************************
 //

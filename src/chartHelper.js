@@ -59,8 +59,8 @@ export function updateChartScale(chart, isLog) {
 
 function compareMaxArray(a, b) {
     let comparison = 0;
-    if ((parseInt(a.data[a.data.length-1]) > parseInt(b.data[b.data.length-1])) || (a.data.length > 0 && b.data.length == 0)) comparison = 1;
-    if ((parseInt(a.data[a.data.length-1]) < parseInt(b.data[b.data.length-1])) || (a.data.length == 0 && b.data.length > 0)) comparison = -1;
+    if ((parseFloat(a.data[a.data.length-1]) > parseFloat(b.data[b.data.length-1])) || (a.data.length > 0 && b.data.length == 0)) comparison = 1;
+    if ((parseFloat(a.data[a.data.length-1]) < parseFloat(b.data[b.data.length-1])) || (a.data.length == 0 && b.data.length > 0)) comparison = -1;
     return comparison;
 }
 
