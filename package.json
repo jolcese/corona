@@ -7,9 +7,9 @@
     "chart.js": "^2.9.3"
   },
   "devDependencies": {
-    "css-loader": "^3.4.2",
+    "css-loader": "^6.7.3",
     "csv-loader": "^3.0.2",
-    "html-webpack-plugin": "^4.0.1",
+    "html-webpack-plugin": "^5.5.0",
     "nouislider": "^14.1.1",
     "papaparse": "^5.1.1",
     "request": "^2.88.2",
